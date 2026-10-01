@@ -1,0 +1,12 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`genBrainAtom.integration given: [case10] error paths when: [t0] tools plugged with non-string schema then: throws BadRequestError with helpful message 1`] = `
+"BadRequestError: when tools are plugged, output schema must be z.string() (found: object). most open-source models support either tool_calls or structured json, but not both. use z.string() and parse the response yourself if structure is needed.
+
+{
+  "schemaType": "object",
+  "tools": [
+    "weather.lookup"
+  ]
+}"
+`;

@@ -1,0 +1,228 @@
+name: .test
+
+on:
+  workflow_call:
+    inputs:
+      creds-aws-role-arn:
+        description: "creds for aws, specifies the role to assume via oidc. if not provided, aws auth is skipped"
+        required: false
+        type: string
+      creds-aws-region:
+        description: "creds for aws, specifies the region. defaults to us-east-1"
+        required: false
+        type: string
+        default: "us-east-1"
+    secrets:
+      fireworks-api-key:
+        description: "api key for fireworks ai, used in integration tests"
+        required: true
+
+permissions:
+  id-token: write # required for oidc
+  contents: read
+
+jobs:
+  # install the dependencies
+  install:
+    uses: ./.github/workflows/.install.yml
+
+  # run tests in parallel
+  test-commits:
+    runs-on: ubuntu-24.04
+    needs: [install]
+    steps:
+      - name: checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0 # we need all commits to test:commits
+
+      - name: set node-version
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: get node-modules from cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ./node_modules
+          key: ${{ needs.install.outputs.node-modules-cache-key }}
+
+      - name: test:commits
+        run: npm run test:commits
+
+  test-types:
+    runs-on: ubuntu-24.04
+    needs: [install]
+    steps:
+      - name: checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: set node-version
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: get node-modules from cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ./node_modules
+          key: ${{ needs.install.outputs.node-modules-cache-key }}
+
+      # .why = acceptance tests import this package by name, via its self-link
+      #        (`link:.`), which resolves to dist/. build first, so tsc can see
+      #        the same types a consumer gets
+      - name: build
+        run: npm run build
+
+      - name: test:types
+        run: npm run test:types
+
+  test-format:
+    runs-on: ubuntu-24.04
+    needs: [install]
+    steps:
+      - name: checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: set node version
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: set terraform version
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
+
+      - name: get node-modules from cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ./node_modules
+          key: ${{ needs.install.outputs.node-modules-cache-key }}
+
+      - name: test:format
+        run: npm run test:format
+
+  test-lint:
+    runs-on: ubuntu-24.04
+    needs: [install]
+    steps:
+      - name: checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: set node-version
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: get node-modules from cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ./node_modules
+          key: ${{ needs.install.outputs.node-modules-cache-key }}
+
+      # .why = lint the same tree a developer lints. without the linked .agent/
+      #        roles, ci lints a fresh checkout and stays green on a depcheck
+      #        gap that fails every local run (declapract-typescript-ehmpathy#639)
+      - name: prepare:rhachet
+        run: npm run prepare:rhachet
+
+      - name: test:lint
+        run: npm run test:lint
+
+  test-unit:
+    runs-on: ubuntu-24.04
+    needs: [install]
+    steps:
+      - name: checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: set node-version
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: get node-modules from cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ./node_modules
+          key: ${{ needs.install.outputs.node-modules-cache-key }}
+
+      - name: test:unit
+        run: THOROUGH=true npm run test:unit
+
+  test-integration:
+    runs-on: ubuntu-24.04
+    needs: [install]
+    steps:
+      - name: checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: set node-version
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: get node-modules from cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ./node_modules
+          key: ${{ needs.install.outputs.node-modules-cache-key }}
+
+      - name: get aws auth, if creds supplied
+        if: ${{ inputs.creds-aws-role-arn }}
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          role-to-assume: ${{ inputs.creds-aws-role-arn }}
+          aws-region: ${{ inputs.creds-aws-region }}
+
+      - name: start:testdb
+        run: npm run start:testdb --if-present
+
+      - name: start:livedb:dev
+        run: npm run start:livedb:dev --if-present
+
+      - name: prepare:rhachet
+        run: npm run prepare:rhachet
+
+      - name: test:integration
+        run: THOROUGH=true npm run test:integration
+        env:
+          FIREWORKS_API_KEY: ${{ secrets.fireworks-api-key }}
+
+  test-acceptance-locally:
+    runs-on: ubuntu-24.04
+    needs: [install]
+    steps:
+      - name: checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: set node-version
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: ".nvmrc"
+
+      - name: get node-modules from cache
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ./node_modules
+          key: ${{ needs.install.outputs.node-modules-cache-key }}
+
+      - name: get aws auth, if creds supplied
+        if: ${{ inputs.creds-aws-role-arn }}
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4
+        with:
+          role-to-assume: ${{ inputs.creds-aws-role-arn }}
+          aws-region: ${{ inputs.creds-aws-region }}
+
+      - name: start:testdb
+        run: npm run start:testdb --if-present
+
+      - name: start:livedb:dev
+        run: npm run start:livedb:dev --if-present
+
+      - name: prepare:rhachet
+        run: npm run prepare:rhachet
+
+      - name: test:acceptance:locally
+        run: THOROUGH=true npm run test:acceptance:locally --if-present
+        env:
+          FIREWORKS_API_KEY: ${{ secrets.fireworks-api-key }}
