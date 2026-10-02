@@ -1,18 +1,21 @@
-import { UnexpectedCodePathError } from 'helpful-errors';
+import { ConstraintError, UnexpectedCodePathError } from 'helpful-errors';
 import path from 'path';
 import { genContextBrainSupplier } from 'rhachet';
 import type {
+  BrainEpisode,
   BrainPlugToolDefinition,
   BrainPlugToolExecution,
+  BrainPlugToolInvocation,
 } from 'rhachet/brains';
 import { genArtifactGitFile } from 'rhachet-artifact-git';
 import { getError, given, then, useThen, when } from 'test-fns';
 import { z } from 'zod';
 
 import { TEST_ASSETS_DIR } from '../../.test/assets/dir';
-import type { BrainSuppliesFireworks } from './BrainAtom.config';
+import type { BrainSuppliesOpenRouter } from './BrainAtom.config';
 import { genBrainAtom } from './genBrainAtom';
-import type { BrainAtomSlugFireworks } from './slug/AtomSlug';
+import type { BrainAtomSlugOpenRouter } from './slug/AtomSlug';
+import { getAllAtomSlugs } from './slug/getAllAtomSlugs';
 
 const BRIEFS_DIR = path.join(TEST_ASSETS_DIR, '/example.briefs');
 
@@ -22,39 +25,36 @@ const outputSchema = z.object({ content: z.string() });
 const toolOutputSchema = z.string();
 
 // keyrack context for all tests
-const context = genContextBrainSupplier<'fireworks', BrainSuppliesFireworks>(
-  'fireworks',
+const context = genContextBrainSupplier<'openrouter', BrainSuppliesOpenRouter>(
+  'openrouter',
   { creds: { keyrack: { owner: 'ehmpath', env: 'test' } } },
 );
 
 describe('genBrainAtom.integration', () => {
-  // note: k2.5 excluded from model loop tests due to slow Fireworks infrastructure
   jest.setTimeout(90000);
 
-  // use deepseek-v4-flash for fast integration tests
-  const brainAtom = genBrainAtom({ slug: 'fireworks/deepseek/flash/v4' });
+  // the bare deepseek flash tier: cheap and fast, so the bulk of the suite rides it
+  const brainAtom = genBrainAtom({ slug: 'openrouter/deepseek/flash' });
 
-  // use minimax/m3 for tool use tests (reliable tool call + slug support)
-  const brainAtomWithTools = genBrainAtom({
-    slug: 'fireworks/minimax/flash/m3',
-  });
+  // the glm flash tier for tool use tests (reliable tool call + slug support)
+  const brainAtomWithTools = genBrainAtom({ slug: 'openrouter/z-ai/flash' });
 
-  given('[case1] genBrainAtom({ slug: "fireworks/deepseek/flash/v4" })', () => {
+  given('[case1] genBrainAtom({ slug: "openrouter/deepseek/flash" })', () => {
     when('[t0] atom is created', () => {
-      then('repo is "fireworks"', () => {
-        expect(brainAtom.repo).toEqual('fireworks');
+      then('repo is "openrouter"', () => {
+        expect(brainAtom.repo).toEqual('openrouter');
       });
 
       // 🔴 .why = the atom keeps the name it was asked by, so a consumer who
-      //           holds the retired name can select it. the description names
-      //           the successor it reaches (`rule.require.redirected-slugs-selectable`).
-      then('slug is the retired name it was asked by', () => {
-        expect(brainAtom.slug).toEqual('fireworks/deepseek/flash/v4');
+      //           holds the tier name can select it
+      //           (`rule.require.versionless-slugs-selectable`)
+      then('slug is the tier name it was asked by', () => {
+        expect(brainAtom.slug).toEqual('openrouter/deepseek/flash');
       });
 
-      then('description names the successor it routes onto', () => {
+      then('description names the line it reads, never a version', () => {
         expect(brainAtom.description).toContain(
-          'fireworks/deepseek/flash/v4 -> fireworks/deepseek/flash/v4.1',
+          'openrouter/deepseek/flash -> newest',
         );
       });
 
@@ -183,21 +183,8 @@ describe('genBrainAtom.integration', () => {
   });
 
   given('[case4] all models leverage briefs', () => {
-    // every slug that reaches a live model. the AMBIGUOUS retirements
-    // (deepseek/pro/v4, kimi/pro/k2.6, kimi/code/k2.7) were withdrawn by
-    // fireworks 2026-09-26 and now raise a named error by design, so they are
-    // absent. the ROUTED ones stay, since they prove the route still serves.
-    const allSlugs: BrainAtomSlugFireworks[] = [
-      'fireworks/deepseek/flash/v4.1',
-      'fireworks/deepseek/flash/v4',
-      'fireworks/kimi/pro/k3',
-      'fireworks/glm/pro/5.3',
-      'fireworks/glm/flash/5.3',
-      'fireworks/glm/pro/5.2',
-      'fireworks/minimax/flash/m3',
-      'fireworks/gpt-oss/flash/120b',
-      'fireworks/nemotron/flash/3.5',
-    ];
+    // every tier, each on the model it reads from the catalog today
+    const allSlugs: BrainAtomSlugOpenRouter[] = getAllAtomSlugs();
 
     const briefs = [
       genArtifactGitFile({
@@ -209,8 +196,8 @@ describe('genBrainAtom.integration', () => {
       when(`[${slug}] ask is called with briefs`, () => {
         // .note = prompt is neutral ('acknowledge this message'), not 'say hello' — a
         //         literal 'say hello' competed with the brief's directive, and several
-        //         open-weight models (observed: minimax/m3, glm/5.2, qwen/3.7-plus)
-        //         intermittently followed the surface prompt and dropped the brief.
+        //         open-weight models intermittently followed the surface prompt and
+        //         dropped the brief.
         //         attempts raised 3->5 as a secondary margin; llm inference stays
         //         probabilistic even with the prompt no longer in tension with the brief.
         then.repeatably({
@@ -280,12 +267,21 @@ describe('genBrainAtom.integration', () => {
         const input = invocation?.input as { city: string };
         expect(typeof input.city).toEqual('string');
       });
+
+      then('the calls shape a caller reads matches snapshot', () => {
+        // .note = the id and the model's words are live; the shape is not
+        const shape = (result.calls?.tools ?? []).map((invocation) => ({
+          exid: typeof invocation.exid === 'string' ? '(live id)' : null,
+          slug: invocation.slug,
+          inputKeys: Object.keys(invocation.input ?? {}).sort(),
+        }));
+        expect(shape.slice(0, 1)).toMatchSnapshot();
+      });
     });
 
-    // note: test "tools plugged, brain answers directly" is NOT supported by Fireworks AI
-    // when tools are present, we cannot send response_format (model ignores tools)
-    // so if the model answers directly, output won't conform to schema
-    // this is a Fireworks AI limitation; xAI handles this differently
+    // .note = "tools plugged, brain answers directly" is not covered: with tools
+    //         present, response_format is withheld (vllm-based hosts reject
+    //         both at once), so a direct answer would not conform to a schema
   });
 
   given('[case6] tool continuation', () => {
@@ -352,6 +348,59 @@ describe('genBrainAtom.integration', () => {
   });
 
   given('[case7] error signals in tool execution', () => {
+    /**
+     * .what = answers each tool call with the same error signal until the brain
+     *         replies in text, up to a bound
+     * .why = after a tool error a model may retry the tool (measured 2026-10-02:
+     *        glm-5.3-flash retries 'city not found' every time) — a valid,
+     *        graceful move. the caller's loop answers it again, as a real
+     *        tool loop would, and the brain must then give up in prose
+     */
+    const askUntilAnswered = async (input: {
+      episode: BrainEpisode;
+      invocations: BrainPlugToolInvocation[];
+      signal: BrainPlugToolExecution['signal'];
+      error: Error;
+      roundsLeft: number;
+    }): Promise<{ output: string | null }> => {
+      // answer every call with the error, then ask again
+      const executions: BrainPlugToolExecution[] = input.invocations.map(
+        (invocation) => ({
+          exid: invocation.exid,
+          slug: invocation.slug,
+          input: invocation.input,
+          signal: input.signal,
+          output: { error: input.error },
+          metrics: { cost: { time: { milliseconds: 50 } } },
+        }),
+      );
+      const result = await brainAtomWithTools.ask(
+        {
+          on: { episode: input.episode },
+          role: {},
+          prompt: executions,
+          schema: { output: toolOutputSchema },
+          plugs: { tools: [weatherTool] },
+        },
+        context,
+      );
+
+      // the brain replied in prose, or the bound is spent
+      const invocations: BrainPlugToolInvocation[] = result.calls?.tools ?? [];
+      if (invocations.length === 0 || input.roundsLeft <= 1)
+        return { output: result.output };
+
+      // the brain retried the tool: answer it again
+      return askUntilAnswered({
+        ...input,
+        episode: result.episode,
+        invocations,
+        roundsLeft: input.roundsLeft - 1,
+      });
+    };
+
+    // .note = strict: each run must end in prose after the error. the caller's
+    //         loop answers a retried tool call, so a retry is no failure
     when('[t0] signal is error:constraint', () => {
       then('brain receives error context and responds', async () => {
         // first get tool call
@@ -365,38 +414,24 @@ describe('genBrainAtom.integration', () => {
           context,
         );
 
-        const invocation = resultFirst.calls?.tools?.[0];
-        if (!invocation)
+        const invocations = resultFirst.calls?.tools ?? [];
+        if (invocations.length === 0)
           throw new UnexpectedCodePathError('no tool invocation found', {
             resultFirst,
           });
 
-        // continue with error:constraint signal
-        const executions: BrainPlugToolExecution[] = [
-          {
-            exid: invocation.exid,
-            slug: invocation.slug,
-            input: invocation.input,
-            signal: 'error:constraint',
-            output: { error: new Error('city not found in database') },
-            metrics: { cost: { time: { milliseconds: 50 } } },
-          },
-        ];
+        // continue with error:constraint signal, until the brain answers
+        const resultFinal = await askUntilAnswered({
+          episode: resultFirst.episode,
+          invocations,
+          signal: 'error:constraint',
+          error: new Error('city not found in database'),
+          roundsLeft: 3,
+        });
 
-        const resultSecond = await brainAtomWithTools.ask(
-          {
-            on: { episode: resultFirst.episode },
-            role: {},
-            prompt: executions,
-            schema: { output: toolOutputSchema },
-            plugs: { tools: [weatherTool] },
-          },
-          context,
-        );
-
-        // brain should handle error gracefully
-        expect(resultSecond.output).toBeDefined();
-        expect(resultSecond.output).not.toBeNull();
+        // brain should give up in prose, never loop forever
+        expect(resultFinal.output).toBeDefined();
+        expect(resultFinal.output).not.toBeNull();
       });
     });
 
@@ -413,62 +448,35 @@ describe('genBrainAtom.integration', () => {
           context,
         );
 
-        const invocation = resultFirst.calls?.tools?.[0];
-        if (!invocation)
+        const invocations = resultFirst.calls?.tools ?? [];
+        if (invocations.length === 0)
           throw new UnexpectedCodePathError('no tool invocation found', {
             resultFirst,
           });
 
-        // continue with error:malfunction signal
-        const executions: BrainPlugToolExecution[] = [
-          {
-            exid: invocation.exid,
-            slug: invocation.slug,
-            input: invocation.input,
-            signal: 'error:malfunction',
-            output: { error: new Error('weather service unavailable') },
-            metrics: { cost: { time: { milliseconds: 30 } } },
-          },
-        ];
+        // continue with error:malfunction signal, until the brain answers
+        const resultFinal = await askUntilAnswered({
+          episode: resultFirst.episode,
+          invocations,
+          signal: 'error:malfunction',
+          error: new Error('weather service unavailable'),
+          roundsLeft: 3,
+        });
 
-        const resultSecond = await brainAtomWithTools.ask(
-          {
-            on: { episode: resultFirst.episode },
-            role: {},
-            prompt: executions,
-            schema: { output: toolOutputSchema },
-            plugs: { tools: [weatherTool] },
-          },
-          context,
-        );
-
-        // brain should handle malfunction gracefully
-        expect(resultSecond.output).toBeDefined();
-        expect(resultSecond.output).not.toBeNull();
+        // brain should give up in prose, never loop forever
+        expect(resultFinal.output).toBeDefined();
+        expect(resultFinal.output).not.toBeNull();
       });
     });
   });
 
-  // note: case8 "structured output with tools on initial invocation" is NOT supported by Fireworks AI
-  // Fireworks AI prioritizes json_schema over tool invocation when both are present
-  // so we cannot send response_format for initial invocation when tools are plugged
-  // structured output works on tool continuation (when prompt is BrainPlugToolExecution[])
-  // this is a Fireworks AI limitation; xAI handles this differently
+  // .note = case8 "structured output with tools on initial invocation" is not
+  //         covered: response_format is withheld when tools are plugged.
+  //         structured output works on tool continuation
 
   given('[case9] tool use model compatibility', () => {
-    // every model that still serves declares tooluse; each is exercised here.
-    // the withdrawn AMBIGUOUS retirements are absent (see [case4]).
-    const toolCompatSlugs: BrainAtomSlugFireworks[] = [
-      'fireworks/deepseek/flash/v4.1',
-      'fireworks/deepseek/flash/v4',
-      'fireworks/kimi/pro/k3',
-      'fireworks/glm/pro/5.3',
-      'fireworks/glm/flash/5.3',
-      'fireworks/glm/pro/5.2',
-      'fireworks/minimax/flash/m3',
-      'fireworks/gpt-oss/flash/120b',
-      'fireworks/nemotron/flash/3.5',
-    ];
+    // every tier declares tooluse; each is exercised here
+    const toolCompatSlugs: BrainAtomSlugOpenRouter[] = getAllAtomSlugs();
 
     for (const slug of toolCompatSlugs) {
       when(`[${slug}] ask is called with tools`, () => {
@@ -499,9 +507,55 @@ describe('genBrainAtom.integration', () => {
     }
   });
 
+  given('[case12] an unlisted openrouter id (case=20)', () => {
+    // .why = any openrouter id serves with no release of this package; a typo
+    //        is refused before any spend, with the ids it likely meant
+    when('[t0] a typo of a real id is asked', () => {
+      const error = useThen('it is refused', async () => {
+        const errorCaught = await getError(
+          genBrainAtom({ slug: 'openrouter/z-ai/glm-5.3-flahs/floor' }).ask(
+            {
+              role: {},
+              prompt: 'respond with exactly: hello world',
+              schema: { output: outputSchema },
+            },
+            context,
+          ),
+        );
+
+        // .note = return plain data; an Error's `message` is non-enumerable
+        //         and does not survive the useThen proxy
+        return {
+          isConstraint: errorCaught instanceof ConstraintError,
+          message: errorCaught.message,
+        };
+      });
+
+      then('the refusal is a ConstraintError that names the absent id', () => {
+        expect(error.isConstraint).toEqual(true);
+        expect(error.message).toContain(
+          "openrouter lists no model 'z-ai/glm-5.3-flahs'",
+        );
+      });
+
+      then(
+        'the intended id heads the suggestions, as a ready slug with the filter kept',
+        () => {
+          const suggestions = error.message
+            .split('\n')
+            .filter((line) => line.startsWith('  - '));
+          expect(suggestions[0]).toEqual(
+            '  - openrouter/z-ai/glm-5.3-flash/floor',
+          );
+          expect(suggestions).toHaveLength(5);
+        },
+      );
+    });
+  });
+
   given('[case10] error paths', () => {
     when('[t0] tools plugged with non-string schema', () => {
-      then('throws BadRequestError with helpful message', async () => {
+      then('throws ConstraintError with helpful message', async () => {
         const error = await getError(() =>
           brainAtomWithTools.ask(
             {
@@ -515,6 +569,20 @@ describe('genBrainAtom.integration', () => {
         );
         expect(error.message).toContain('when tools are plugged');
         expect(error.message).toContain('z.string()');
+        expect(error.message).toMatchSnapshot();
+      });
+    });
+
+    when('[t1] no credentials in context', () => {
+      then('throws ConstraintError that names the fix', async () => {
+        const error = await getError(() =>
+          brainAtomWithTools.ask(
+            { role: {}, prompt: 'hello', schema: { output: z.string() } },
+            {},
+          ),
+        );
+        expect(error).toBeInstanceOf(ConstraintError);
+        expect(error.message).toContain("genContextBrainSupplier('openrouter'");
         expect(error.message).toMatchSnapshot();
       });
     });
@@ -535,9 +603,9 @@ describe('genBrainAtom.integration', () => {
     };
 
     // test tool use on models that support it
-    const modelsToTest: BrainAtomSlugFireworks[] = [
-      'fireworks/minimax/flash/m3',
-      'fireworks/glm/flash/5.3',
+    const modelsToTest: BrainAtomSlugOpenRouter[] = [
+      'openrouter/z-ai/flash',
+      'openrouter/deepseek/flash',
     ];
 
     for (const slug of modelsToTest) {

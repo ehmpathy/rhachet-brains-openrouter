@@ -3,6 +3,7 @@
 *.log
 *.tsbuildinfo
 .artifact
+.cache
 .env
 .review
 .serverless

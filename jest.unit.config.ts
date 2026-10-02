@@ -31,6 +31,7 @@ const config: Config = {
     '!**/*.acceptance.test.ts',
     '!**/*.integration.test.ts',
     '!**/.yalc/**',
+    '!**/.agent/**', // agent caches hold copies of tests (e.g. rmsafe's trash); never run them
   ],
   setupFilesAfterEnv: ['./jest.unit.env.ts'],
 

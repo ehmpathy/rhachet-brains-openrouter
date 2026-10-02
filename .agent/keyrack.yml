@@ -3,6 +3,7 @@ extends:
   - .agent/repo=bhuild/role=dispatcher/keyrack.yml
   - .agent/repo=ehmpathy/role=mechanic/keyrack.yml
 env.prod: null
-env.prep: null
+env.prep:
+  - OPENROUTER_API_KEY
 env.test:
-  - FIREWORKS_API_KEY
+  - OPENROUTER_API_KEY

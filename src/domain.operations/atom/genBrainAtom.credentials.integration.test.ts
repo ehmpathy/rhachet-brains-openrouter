@@ -1,27 +1,26 @@
-import { BadRequestError } from 'helpful-errors';
+import { ConstraintError } from 'helpful-errors';
 import { genContextBrainSupplier } from 'rhachet';
 import { getError, given, then, when } from 'test-fns';
 import { z } from 'zod';
 
-import { type BrainSuppliesFireworks, genBrainAtom } from './genBrainAtom';
+import { type BrainSuppliesOpenRouter, genBrainAtom } from './genBrainAtom';
 
-if (!process.env.FIREWORKS_API_KEY)
-  throw new BadRequestError(
-    'FIREWORKS_API_KEY is required for integration tests',
+if (!process.env.OPENROUTER_API_KEY)
+  throw new ConstraintError(
+    'OPENROUTER_API_KEY is required for integration tests',
     {
       hint: 'run: rhx keyrack unlock --owner ehmpath --env test',
-      env: 'FIREWORKS_API_KEY',
+      env: 'OPENROUTER_API_KEY',
     },
   );
 
 // store the real api key for test context suppliers
-const realApiKey = process.env.FIREWORKS_API_KEY;
+const realApiKey = process.env.OPENROUTER_API_KEY;
 
 describe('genBrainAtom.credentials.integration', () => {
   // .note = matches genBrainAtom.integration.test.ts. cases 2 and 4 each make
-  //         2 sequential real calls; observed CI latency for a single
-  //         fireworks/deepseek/flash/v4 call ranges 1-28s, so 60s left no
-  //         headroom for two in sequence (measured: 58.4s pass, 60.0s fail).
+  //         2 sequential real calls; a single call can take tens of seconds
+  //         on a slow host, so 90s leaves headroom for two in sequence
   jest.setTimeout(90000);
 
   given('[case1] context with creds getter', () => {
@@ -31,16 +30,16 @@ describe('genBrainAtom.credentials.integration', () => {
         let getterCallCount = 0;
 
         const context = genContextBrainSupplier<
-          'fireworks',
-          BrainSuppliesFireworks
-        >('fireworks', {
+          'openrouter',
+          BrainSuppliesOpenRouter
+        >('openrouter', {
           creds: async () => {
             getterCallCount += 1;
-            return { FIREWORKS_API_KEY: realApiKey };
+            return { OPENROUTER_API_KEY: realApiKey };
           },
         });
 
-        const atom = genBrainAtom({ slug: 'fireworks/deepseek/flash/v4' });
+        const atom = genBrainAtom({ slug: 'openrouter/deepseek/flash' });
         const result = await atom.ask(
           {
             role: {},
@@ -62,16 +61,16 @@ describe('genBrainAtom.credentials.integration', () => {
         let getterCallCount = 0;
 
         const context = genContextBrainSupplier<
-          'fireworks',
-          BrainSuppliesFireworks
-        >('fireworks', {
+          'openrouter',
+          BrainSuppliesOpenRouter
+        >('openrouter', {
           creds: async () => {
             getterCallCount += 1;
-            return { FIREWORKS_API_KEY: realApiKey };
+            return { OPENROUTER_API_KEY: realApiKey };
           },
         });
 
-        const atom = genBrainAtom({ slug: 'fireworks/deepseek/flash/v4' });
+        const atom = genBrainAtom({ slug: 'openrouter/deepseek/flash' });
 
         // first ask
         await atom.ask(
@@ -105,15 +104,15 @@ describe('genBrainAtom.credentials.integration', () => {
     when('[t0] creds getter throws', () => {
       then('error propagates with message', async () => {
         const context = genContextBrainSupplier<
-          'fireworks',
-          BrainSuppliesFireworks
-        >('fireworks', {
+          'openrouter',
+          BrainSuppliesOpenRouter
+        >('openrouter', {
           creds: async () => {
             throw new Error('vault unreachable');
           },
         });
 
-        const atom = genBrainAtom({ slug: 'fireworks/deepseek/flash/v4' });
+        const atom = genBrainAtom({ slug: 'openrouter/deepseek/flash' });
         const error = await getError(
           atom.ask(
             {
@@ -138,26 +137,26 @@ describe('genBrainAtom.credentials.integration', () => {
         const apiKeysUsed: string[] = [];
 
         const contextA = genContextBrainSupplier<
-          'fireworks',
-          BrainSuppliesFireworks
-        >('fireworks', {
+          'openrouter',
+          BrainSuppliesOpenRouter
+        >('openrouter', {
           creds: async () => {
             apiKeysUsed.push('keyA');
-            return { FIREWORKS_API_KEY: realApiKey }; // same key for api call to succeed
+            return { OPENROUTER_API_KEY: realApiKey }; // same key for api call to succeed
           },
         });
 
         const contextB = genContextBrainSupplier<
-          'fireworks',
-          BrainSuppliesFireworks
-        >('fireworks', {
+          'openrouter',
+          BrainSuppliesOpenRouter
+        >('openrouter', {
           creds: async () => {
             apiKeysUsed.push('keyB');
-            return { FIREWORKS_API_KEY: realApiKey }; // same key for api call to succeed
+            return { OPENROUTER_API_KEY: realApiKey }; // same key for api call to succeed
           },
         });
 
-        const atom = genBrainAtom({ slug: 'fireworks/deepseek/flash/v4' });
+        const atom = genBrainAtom({ slug: 'openrouter/deepseek/flash' });
 
         // call with context A
         await atom.ask(
@@ -188,13 +187,13 @@ describe('genBrainAtom.credentials.integration', () => {
     when('[t0] context uses keyrack config', () => {
       then('credentials are fetched from keyrack', async () => {
         const context = genContextBrainSupplier<
-          'fireworks',
-          BrainSuppliesFireworks
-        >('fireworks', {
+          'openrouter',
+          BrainSuppliesOpenRouter
+        >('openrouter', {
           creds: { keyrack: { owner: 'ehmpath', env: 'test' } },
         });
 
-        const atom = genBrainAtom({ slug: 'fireworks/deepseek/flash/v4' });
+        const atom = genBrainAtom({ slug: 'openrouter/deepseek/flash' });
         const result = await atom.ask(
           {
             role: {},

@@ -27,8 +27,13 @@ ignores:
   #        this repo's rhachet registry, so reviews can run on the models we
   #        ship. registration happens by install, never by import, so depcheck
   #        cannot observe the use.
-  - rhachet-brains-fireworksai
+  - rhachet-brains-openrouter
   - rhachet-roles-bhrain
+  - rhachet-roles-bhrowser
+  # .why = the bhrowser role's skills import playwright via the linked .agent
+  #        role. depcheck sees that import only where the link exists (local),
+  #        so it reads as absent locally without the dep, and unused in ci
+  - playwright
   - rhachet-roles-bhuild
   - rhachet-roles-ehmpathy
   - tsc-alias

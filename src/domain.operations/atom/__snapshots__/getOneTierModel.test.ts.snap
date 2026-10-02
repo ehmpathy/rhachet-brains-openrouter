@@ -1,0 +1,15 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`getOneTierModel given: [case4] a catalog with no live member of the line when: [t0] the tier is read then: it is refused before any spend, and names the line 1`] = `
+"✋ ConstraintError: openrouter lists no live model for 'openrouter/z-ai/flash'. no call was sent.
+
+the tier looks for the newest undated id that matches /^z-ai\\/glm-\\d+(?:\\.\\d+)*-flash(?:-\\d{4})?$/
+
+fix: name an openrouter id directly, e.g. openrouter/{author}/{model}
+see every id: https://openrouter.ai/models
+
+{
+  "tier": "openrouter/z-ai/flash",
+  "line": "/^z-ai\\\\/glm-\\\\d+(?:\\\\.\\\\d+)*-flash(?:-\\\\d{4})?$/"
+}"
+`;

@@ -1,0 +1,11 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`asOpenRouterToolMessages an error execution with no error in its output fails with a named error 1`] = `
+"✋ ConstraintError: tool execution 'call-2' signaled 'error:constraint' with no error in its output
+
+{
+  "exid": "call-2",
+  "slug": "getWaveReport",
+  "hint": "a failed execution must carry output: { error: new Error(...) }"
+}"
+`;

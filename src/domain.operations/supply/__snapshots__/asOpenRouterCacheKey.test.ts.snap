@@ -1,0 +1,3 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`asOpenRouterCacheKey the key is safe as a file name and names the read 1`] = `"openrouter.endpoints.model_ab.0b113ed4d7e42cac50f674e37f8e6a85c082fc937414f6fa6e3dc8daabe94b27"`;

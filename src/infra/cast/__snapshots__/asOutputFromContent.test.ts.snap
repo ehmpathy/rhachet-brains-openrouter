@@ -1,0 +1,21 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`asOutputFromContent given: [case4] z.object({ content: z.string() }) schema when: [t1] content is invalid JSON then: throws a MalfunctionError that names the reply, not a bare SyntaxError 1`] = `
+"💥 MalfunctionError: the reply is not valid json (Unexpected token 'o', "not json" is not valid JSON), though a json schema was asked for
+
+{
+  "contentLength": 8,
+  "contentHead": "not json",
+  "contentTail": "not json"
+}"
+`;
+
+exports[`asOutputFromContent given: [case4] z.object({ content: z.string() }) schema when: [t3] content is empty — a reply that came back with naught then: throws a MalfunctionError that names the empty reply 1`] = `
+"💥 MalfunctionError: the reply is not valid json (Unexpected end of JSON input), though a json schema was asked for
+
+{
+  "contentLength": 0,
+  "contentHead": "",
+  "contentTail": ""
+}"
+`;
