@@ -39,8 +39,11 @@ if (
  * .what = source credentials from keyrack for test env
  * .why =
  *   - auto-inject keys into process.env
- *   - fail fast with helpful error if keyrack locked or keys absent
+ *
+ * .note = lenient, since the extended role keyracks declare keys this repo
+ *         never reads (e.g. the mechanic's FIREWORKS_API_KEY). each test that
+ *         needs OPENROUTER_API_KEY still fails loud with a ConstraintError
  */
 const keyrackYmlPath = join(process.cwd(), '.agent/keyrack.yml');
 if (existsSync(keyrackYmlPath))
-  keyrack.source({ env: 'test', owner: 'ehmpath', mode: 'strict' });
+  keyrack.source({ env: 'test', owner: 'ehmpath', mode: 'lenient' });

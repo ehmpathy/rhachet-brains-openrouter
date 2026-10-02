@@ -275,7 +275,12 @@ describe('getBrainAtomsByOpenRouter.acceptance', () => {
   //        for `rhachet-brains-*` deps and calls each `getBrainAtomsBy*` export.
   //        this repo's self-link (`link:.`) is that dependency, so discovery here
   //        reaches the built package exactly as it would in a consumer's repo
-  given('[case1b] a tier chosen by discovery, as the readme shows', () => {
+  // .note = skipped by the wisher's call: rhachet loads each brain package via a
+  //         dynamic `import()`, which jest's vm refuses without
+  //         --experimental-vm-modules, so discovery degrades to no brains here.
+  //         the fix is caught in
+  //         .dream/v2026_10_02.fix.acceptance-discovery-under-jest-vm.md
+  given.skip('[case1b] a tier chosen by discovery, as the readme shows', () => {
     when('[t0] it is chosen with no brain list, and asked live', () => {
       const scene = useThen('it answers', async () => {
         const { brain } = await genContextBrain({
@@ -644,7 +649,9 @@ describe('getBrainAtomsByOpenRouter.acceptance', () => {
         () => {
           expect(scene.isConstraint).toEqual(true);
           expect(scene.message).toContain('no call was sent');
-          expect(scene.message).toContain('supports(response_format,structured_outputs)');
+          expect(scene.message).toContain(
+            'supports(response_format,structured_outputs)',
+          );
         },
       );
 
