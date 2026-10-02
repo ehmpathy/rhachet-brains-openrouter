@@ -1,0 +1,21 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`getOneCatalogModel given: [case2] a typo of a listed id when: [t0] it is looked up then: the message matches snapshot 1`] = `
+"✋ ConstraintError: openrouter lists no model 'deepseek/deepseek-v4.1-flsh'. no call was sent.
+
+did you mean one of these?
+  - openrouter/deepseek/deepseek-v4.1-flash/floor&speed=min50tps
+  - openrouter/deepseek/deepseek-v4.1-pro/floor&speed=min50tps
+  - openrouter/qwen/qwen3.6-max/floor&speed=min50tps
+
+see every id: https://openrouter.ai/models
+
+{
+  "model": "deepseek/deepseek-v4.1-flsh",
+  "similar": [
+    "openrouter/deepseek/deepseek-v4.1-flash/floor&speed=min50tps",
+    "openrouter/deepseek/deepseek-v4.1-pro/floor&speed=min50tps",
+    "openrouter/qwen/qwen3.6-max/floor&speed=min50tps"
+  ]
+}"
+`;

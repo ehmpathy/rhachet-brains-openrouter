@@ -1,0 +1,36 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`asRankedReport the ranked rows a caller audits match snapshot 1`] = `
+[
+  {
+    "estUsd": 0.0000123,
+    "tag": "a",
+    "tps": 12,
+    "verdict": "speed 12tps < min 50tps",
+  },
+  {
+    "estUsd": 0.0000123,
+    "tag": "b",
+    "tps": 80,
+    "verdict": "qualified",
+  },
+  {
+    "estUsd": 0.0000123,
+    "tag": "c",
+    "tps": 80,
+    "verdict": "qualified",
+  },
+  {
+    "estUsd": 0.0000123,
+    "tag": "d",
+    "tps": 80,
+    "verdict": "qualified",
+  },
+  {
+    "estUsd": 0.0000123,
+    "tag": "e",
+    "tps": 80,
+    "verdict": "qualified",
+  },
+]
+`;

@@ -1,0 +1,162 @@
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "at": 1790888896734,
+  "results": [
+    {
+      "tag": "fireworks",
+      "i": 0,
+      "answer": {
+        "status": 429,
+        "id": null,
+        "provider": null,
+        "error": {
+          "message": "Provider returned error",
+          "code": 429,
+          "metadata": {
+            "raw": "deepseek/deepseek-v4.1-flash is temporarily rate-limited upstream. Please retry shortly, or add your own key to accumulate your rate limits: https://openrouter.ai/settings/integrations",
+            "provider_name": "Fireworks",
+            "is_byok": false,
+            "provider_error_code": "invalid_request_error",
+            "limit_source": "upstream_provider_shared_pool",
+            "remedy_hint": "Retry shortly, add your own provider key (https://openrouter.ai/settings/integrations), or route to another provider with provider routing: https://openrouter.ai/docs/features/provider-routing",
+            "retry_after_seconds": 5,
+            "retry_after_seconds_raw": 5,
+            "headers": {
+              "Retry-After": "5"
+            }
+          }
+        }
+      },
+      "generation": null
+    },
+    {
+      "tag": "fireworks",
+      "i": 1,
+      "answer": {
+        "status": 200,
+        "id": "gen-1790888862-rysYXGuZmCipOGOYSBax",
+        "provider": "Fireworks",
+        "error": null
+      },
+      "generation": {
+        "polls": 11,
+        "attempts": [
+          {
+            "endpoint_id": "834bf093-089a-4442-bc64-8adce8b83e39",
+            "id": "chatcmpl-a447d559321f44f7aaa1de756378412f",
+            "is_byok": false,
+            "latency": 4397,
+            "model_permaslug": "deepseek/deepseek-v4.1-flash-20260910",
+            "provider_name": "Fireworks",
+            "status": 200
+          }
+        ]
+      }
+    },
+    {
+      "tag": "fireworks",
+      "i": 2,
+      "answer": {
+        "status": 429,
+        "id": null,
+        "provider": null,
+        "error": {
+          "message": "Provider returned error",
+          "code": 429,
+          "metadata": {
+            "raw": "deepseek/deepseek-v4.1-flash is temporarily rate-limited upstream. Please retry shortly, or add your own key to accumulate your rate limits: https://openrouter.ai/settings/integrations",
+            "provider_name": "Fireworks",
+            "is_byok": false,
+            "provider_error_code": "invalid_request_error",
+            "limit_source": "upstream_provider_shared_pool",
+            "remedy_hint": "Retry shortly, add your own provider key (https://openrouter.ai/settings/integrations), or route to another provider with provider routing: https://openrouter.ai/docs/features/provider-routing",
+            "retry_after_seconds": 5,
+            "retry_after_seconds_raw": 5,
+            "headers": {
+              "Retry-After": "5"
+            }
+          }
+        }
+      },
+      "generation": null
+    },
+    {
+      "tag": "fireworks/us",
+      "i": 0,
+      "answer": {
+        "status": 200,
+        "id": "gen-1790888880-tRWiW0cvRJr1iKpEeM2a",
+        "provider": "Fireworks",
+        "error": null
+      },
+      "generation": {
+        "polls": 11,
+        "attempts": [
+          {
+            "endpoint_id": "b69086f3-e5bb-4b57-a1c0-b507bc447ec8",
+            "id": "chatcmpl-d9fe81d8e71c4672b1a200a7d82184ff",
+            "is_byok": false,
+            "latency": 219,
+            "model_permaslug": "deepseek/deepseek-v4.1-flash-20260910",
+            "provider_name": "Fireworks",
+            "status": 200
+          }
+        ]
+      }
+    },
+    {
+      "tag": "fireworks/us",
+      "i": 1,
+      "answer": {
+        "status": 429,
+        "id": null,
+        "provider": null,
+        "error": {
+          "message": "Provider returned error",
+          "code": 429,
+          "metadata": {
+            "raw": "deepseek/deepseek-v4.1-flash is temporarily rate-limited upstream. Please retry shortly, or add your own key to accumulate your rate limits: https://openrouter.ai/settings/integrations",
+            "provider_name": "Fireworks",
+            "is_byok": false,
+            "provider_error_code": "invalid_request_error",
+            "limit_source": "upstream_provider_shared_pool",
+            "remedy_hint": "Retry shortly, add your own provider key (https://openrouter.ai/settings/integrations), or route to another provider with provider routing: https://openrouter.ai/docs/features/provider-routing",
+            "retry_after_seconds": 5,
+            "retry_after_seconds_raw": 5,
+            "headers": {
+              "Retry-After": "5"
+            }
+          }
+        }
+      },
+      "generation": null
+    },
+    {
+      "tag": "fireworks/us",
+      "i": 2,
+      "answer": {
+        "status": 429,
+        "id": null,
+        "provider": null,
+        "error": {
+          "message": "Provider returned error",
+          "code": 429,
+          "metadata": {
+            "raw": "deepseek/deepseek-v4.1-flash is temporarily rate-limited upstream. Please retry shortly, or add your own key to accumulate your rate limits: https://openrouter.ai/settings/integrations",
+            "provider_name": "Fireworks",
+            "is_byok": false,
+            "provider_error_code": "invalid_request_error",
+            "limit_source": "upstream_provider_shared_pool",
+            "remedy_hint": "Retry shortly, add your own provider key (https://openrouter.ai/settings/integrations), or route to another provider with provider routing: https://openrouter.ai/docs/features/provider-routing",
+            "retry_after_seconds": 5,
+            "retry_after_seconds_raw": 5,
+            "headers": {
+              "Retry-After": "5"
+            }
+          }
+        }
+      },
+      "generation": null
+    }
+  ]
+}

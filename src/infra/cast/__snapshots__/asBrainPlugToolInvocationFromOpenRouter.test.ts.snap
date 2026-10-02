@@ -1,0 +1,12 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`asBrainPlugToolInvocationFromOpenRouter malformed arguments fail with a named error that cites the call 1`] = `
+"💥 MalfunctionError: the model asked for tool 'getWaveReport' with arguments that are not valid json (Unterminated string in JSON at position 13 (line 1 column 14)). no tool was run.
+
+{
+  "exid": "call-2",
+  "slug": "getWaveReport",
+  "argumentsLength": 13,
+  "argumentsHead": "{\\"spot\\":\\"pipe"
+}"
+`;

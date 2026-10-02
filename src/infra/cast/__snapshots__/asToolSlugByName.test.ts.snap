@@ -1,0 +1,15 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`asToolSlugByName two slugs that send under one name are refused, and both named 1`] = `
+"✋ ConstraintError: tools 'weather.lookup' and 'weather_lookup' both send as function 'weather_lookup'. no call was sent.
+
+fix: rename one slug so they differ in a letter, digit, \`_\`, or \`-\`
+
+{
+  "slugs": [
+    "weather.lookup",
+    "weather_lookup"
+  ],
+  "name": "weather_lookup"
+}"
+`;

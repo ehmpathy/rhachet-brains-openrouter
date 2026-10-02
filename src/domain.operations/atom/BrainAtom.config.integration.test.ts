@@ -1,37 +1,48 @@
-import { BadRequestError } from 'helpful-errors';
+import { ConstraintError } from 'helpful-errors';
+import {
+  asIsoPrice,
+  asIsoPriceShape,
+  type IsoPrice,
+  priceMultiply,
+  priceSub,
+} from 'iso-price';
 import OpenAI from 'openai';
 import { given, then, useThen, when } from 'test-fns';
 
-import {
-  type BrainAtomSlugFireworksPinned,
-  CONFIG_BY_ATOM_SLUG,
-} from './BrainAtom.config';
-import { isRetiredAtomSlug } from './slug/AtomSlug.retired';
+import { sdkOpenRouterEndpoints } from '../supply/sdkOpenRouterEndpoints';
+import { getOneTierModel } from './getOneTierModel';
+import { TIER_BY_BARE_SLUG } from './slug/AtomSlug.bare';
+import { getAllAtomSlugs } from './slug/getAllAtomSlugs';
 
-if (!process.env.FIREWORKS_API_KEY)
-  throw new BadRequestError(
-    'FIREWORKS_API_KEY is required for integration tests',
+const API_KEY: string =
+  process.env.OPENROUTER_API_KEY ??
+  ConstraintError.throw(
+    'OPENROUTER_API_KEY is required for integration tests',
     {
       hint: 'run: rhx keyrack unlock --owner ehmpath --env test',
-      env: 'FIREWORKS_API_KEY',
+      env: 'OPENROUTER_API_KEY',
     },
   );
 
 const openai = new OpenAI({
-  apiKey: process.env.FIREWORKS_API_KEY,
-  baseURL: 'https://api.fireworks.ai/inference/v1',
+  apiKey: API_KEY,
+  baseURL: 'https://openrouter.ai/api/v1',
 });
 
-const ALL_SLUGS = Object.keys(
-  CONFIG_BY_ATOM_SLUG,
-) as BrainAtomSlugFireworksPinned[];
+const ALL_TIERS = getAllAtomSlugs();
+
+/**
+ * .what = is one price strictly below another
+ * .why = the installed iso-price exposes no comparator; a negative difference is one
+ */
+const isPriceBelow = (input: { of: IsoPrice; below: IsoPrice }): boolean =>
+  asIsoPriceShape(priceSub(input.of, input.below)).amount < 0n;
 
 /**
  * .what = asks one model the cheapest question that still proves it serves
- * .why = a catalog read reports what fireworks LISTS, never what it SERVES.
- *        verified 2026-09-16: `deepseek-v4-pro`, `qwen3p7-plus`, and
- *        `minimax-m2p7` were each returned by the models api and each answered
- *        404 on inference. so the probe must be a real completion.
+ * .why = a catalog read reports what a provider LISTS, never what it SERVES.
+ *        so the probe must be a real completion
+ *        (`rule.always.verify-model-ids-by-live-call`).
  */
 const askOneLiveProbe = async (input: {
   model: string;
@@ -40,79 +51,192 @@ const askOneLiveProbe = async (input: {
     await openai.chat.completions.create({
       model: input.model,
       messages: [{ role: 'user', content: 'hi' }],
-      max_tokens: 1,
+      // .note = some upstream providers reject max_tokens below 16
+      max_tokens: 16,
     });
     return { served: true, cause: null };
   } catch (error) {
-    if (!(error instanceof Error)) throw error;
+    // only an api refusal is a verdict on the model; a client bug or a network
+    // fault is not, and rethrows untouched rather than read as "not served"
+    if (!(error instanceof OpenAI.APIError)) throw error;
+
+    // an account fault (bad key, no credits) says naught about the model, so
+    // fail loud with the fix rather than report every tier as broken
+    if (error.status === 401 || error.status === 402)
+      throw new ConstraintError('openrouter account cannot pay for a probe', {
+        status: error.status,
+        cause: error,
+        hint: 'check the key, then add credits at https://openrouter.ai/settings/credits',
+      });
+
     return { served: false, cause: error.message };
   }
 };
 
 describe('BrainAtom.config.catalog.integration', () => {
-  // .note = one probe per model, sequential. observed single-call latency on
-  //         fireworks ranges 1-28s, so the whole catalog needs real headroom.
+  // .note = one probe per tier, sequential. a single call can take tens of
+  //         seconds on a cold upstream, so the whole set needs headroom.
   jest.setTimeout(600000);
 
-  given('[case1] every model id declared in the catalog', () => {
-    // .why = this suite is the rot detector. a provider may retire an id, move
-    //        an alias, or drop a model from serverless with no diff in this
-    //        repo — so no unit test and no type can catch it. only a live call
-    //        can, and it must run on every integration pass or the catalog
-    //        rots silently. measured: the prior catalog carried 3 dead ids for
-    //        a month before anyone asked it a question.
+  // 🔴 .why = this suite is the rot detector. a tier reads its model from the
+  //           live catalog, so a renamed model line, or a newest member that no
+  //           host serves, has no diff in this repo. only a live pick plus a
+  //           live call can catch it, on every integration pass
+  given('[case1] every tier, picked from the live catalog', () => {
     // .note = the probe returns a WRAPPER object, never a bare array. `useThen`
     //         hands back a proxy that defers property access, and a proxy does
-    //         not forward array methods — `probed.filter` throws. a named field
-    //         sidesteps that entirely.
-    const probed = useThen('each is probed with a live call', async () => {
+    //         not forward array methods
+    const probed = useThen('each pick is probed with a live call', async () => {
       const results: {
-        slug: BrainAtomSlugFireworksPinned;
+        tier: string;
         model: string;
         served: boolean;
         cause: string | null;
       }[] = [];
-      for (const slug of ALL_SLUGS) {
-        const { model } = CONFIG_BY_ATOM_SLUG[slug];
+      for (const tier of ALL_TIERS) {
+        const model = await getOneTierModel(
+          { tier, apiKey: API_KEY },
+          { sdkOpenRouterEndpoints },
+        );
         const outcome = await askOneLiveProbe({ model });
-        results.push({ slug, model, ...outcome });
+        results.push({ tier, model, ...outcome });
       }
 
-      // record the verdict, so a reader can cite which id rotted
+      // record the verdict, so a reader can cite which tier broke, and on what
       console.log(
         [
-          'fireworks catalog liveness',
+          'openrouter tier liveness',
           ...results.map(
             (result) =>
-              `  ${result.served ? '✔' : '✘'} ${result.slug} -> ${result.model}`,
+              `  ${result.served ? '✔' : '✘'} ${result.tier} -> ${result.model}`,
           ),
         ].join('\n'),
       );
 
       return {
-        count: results.length,
-        // .note = a RETIRED id may 404 by design: fireworks withdraws it on
-        //         its own clock, and the caller then gets a named error that
-        //         lists successors (`getOneRetirementError`). only an id with NO
-        //         retirement on record is rot. measured 2026-09-26: four retired
-        //         ids withdrawn, each already covered by its retirement row.
+        picks: results.map((result) => ({
+          tier: result.tier,
+          model: result.model,
+        })),
         dead: results
           .filter((result) => !result.served)
-          .filter((result) => !isRetiredAtomSlug(result.slug))
-          .map((result) => `${result.slug} (${result.model}): ${result.cause}`),
+          .map((result) => `${result.tier} (${result.model}): ${result.cause}`),
       };
     });
 
-    when('[t0] the probe returns', () => {
-      then('every id with no retirement on record serves', () => {
+    when('[t0] the probes return', () => {
+      then('every tier picked a model', () => {
+        // .why = guards the guard: an empty set passes the check below vacuously
+        expect(probed.picks.length).toEqual(ALL_TIERS.length);
+      });
+
+      then('every tier pick serves a live call', () => {
         expect(probed.dead).toEqual([]);
       });
 
-      then('the catalog is not empty', () => {
-        // .why = guards the guard: an empty catalog would pass the assertion
-        //        above vacuously, so the rot detector would report green while
-        //        it probed naught.
-        expect(probed.count).toBeGreaterThan(0);
+      then('every pick sits on its own tier line', () => {
+        for (const pick of probed.picks)
+          expect(
+            TIER_BY_BARE_SLUG[
+              pick.tier as (typeof ALL_TIERS)[number]
+            ].line.test(pick.model),
+          ).toEqual(true);
+      });
+    });
+  });
+
+  // .why = a tier `{author}/{tier}` wins over the unlisted read, so it would
+  //        shadow an openrouter model of that exact id. none exists today; this
+  //        fails loud the day one ships, rather than misroute in silence
+  given('[case2] every tier name, against the live catalog', () => {
+    when('[t0] the catalog ids are read', () => {
+      const scene = useThen('the read succeeds', async () => {
+        const ids = (
+          await sdkOpenRouterEndpoints.getAllCatalogModels({ apiKey: API_KEY })
+        ).map((model) => model.id);
+        const bares = ALL_TIERS.map((slug) =>
+          slug.replace(/^openrouter\//, ''),
+        );
+        return {
+          idsCount: ids.length,
+          baresCount: bares.length,
+          shadowed: bares.filter((bare) => ids.includes(bare)),
+        };
+      });
+
+      then('the catalog and the tier set are not empty', () => {
+        // .why = guards the guard; an empty side passes the check below vacuously
+        expect(scene.idsCount).toBeGreaterThan(100);
+        expect(scene.baresCount).toBeGreaterThan(0);
+      });
+
+      then('no tier name shadows a real openrouter id', () => {
+        expect(scene.shadowed).toEqual([]);
+      });
+    });
+  });
+
+  // .why = a tier spec is an estimate that must lean HIGH, so a caller who
+  //        budgets by it is never surprised. the floor filter takes the cheapest
+  //        qualified host, so the estimate must sit at or above the cheapest
+  //        live input rate of the model the tier picked
+  given('[case3] every tier rate estimate, against its pick live rates', () => {
+    when('[t0] each pick endpoints are read', () => {
+      const scene = useThen('the reads succeed', async () => {
+        const rows = [];
+        for (const tier of ALL_TIERS) {
+          const model = await getOneTierModel(
+            { tier, apiKey: API_KEY },
+            { sdkOpenRouterEndpoints },
+          );
+          const estimate = priceMultiply({
+            of: TIER_BY_BARE_SLUG[tier].spec.cost.cash.input,
+            by: 1_000_000,
+          });
+
+          // read each live rate; an unpriced endpoint sets no bound
+          const rates = (
+            await sdkOpenRouterEndpoints.getAllForModel({
+              model,
+              apiKey: API_KEY,
+            })
+          )
+            .map((endpoint) => endpoint.pricePromptUsdPerToken * 1e6)
+            .filter((rate) => Number.isFinite(rate));
+          if (!rates.length) {
+            rows.push({
+              line: `${tier} (${model}): no priced endpoint`,
+              low: true,
+            });
+            continue;
+          }
+
+          // cast the bound at the boundary, then compare in iso-price
+          const lowest = asIsoPrice(`$${Math.min(...rates).toFixed(6)}`);
+          rows.push({
+            line: `${tier} (${model}): estimate ${estimate}, cheapest live ${lowest}`,
+            low: isPriceBelow({ of: estimate, below: lowest }),
+          });
+        }
+        console.log(
+          [
+            'tier rate estimate vs cheapest live',
+            ...rows.map((r) => r.line),
+          ].join('\n'),
+        );
+        return {
+          checked: rows.length,
+          low: rows.filter((r) => r.low).map((r) => r.line),
+        };
+      });
+
+      then('every tier was checked', () => {
+        // .why = guards the guard; zero rows passes the check below vacuously
+        expect(scene.checked).toEqual(ALL_TIERS.length);
+      });
+
+      then('no tier estimate sits below its cheapest live rate', () => {
+        expect(scene.low).toEqual([]);
       });
     });
   });

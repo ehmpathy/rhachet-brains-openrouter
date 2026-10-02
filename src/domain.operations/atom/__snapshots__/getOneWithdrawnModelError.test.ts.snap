@@ -1,0 +1,43 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`getOneWithdrawnModelError given: [case3] a model whose date has passed when: [t0] its refusal is read then: the message matches snapshot 1`] = `
+"✋ ConstraintError: openrouter withdrew 'qwen/qwen3-max' on 2026-10-09. it no longer serves.
+
+switch to a live model, e.g.:
+  - openrouter/qwen/qwen3.6-max/floor
+  - openrouter/qwen/qwen3-coder/floor
+  - openrouter/deepseek/deepseek-v4.1-flash/floor
+
+see every id: https://openrouter.ai/models
+
+{
+  "model": "qwen/qwen3-max",
+  "expiresOn": "2026-10-09",
+  "similar": [
+    "openrouter/qwen/qwen3.6-max/floor",
+    "openrouter/qwen/qwen3-coder/floor",
+    "openrouter/deepseek/deepseek-v4.1-flash/floor"
+  ]
+}"
+`;
+
+exports[`getOneWithdrawnModelError given: [case4] a model the catalog no longer lists when: [t0] its refusal is read then: the message matches snapshot 1`] = `
+"✋ ConstraintError: openrouter withdrew 'acme/gone-model' and no longer lists it. it no longer serves.
+
+switch to a live model, e.g.:
+  - openrouter/qwen/qwen3-coder/floor
+  - openrouter/qwen/qwen3.6-max/floor
+  - openrouter/deepseek/deepseek-v4.1-flash/floor
+
+see every id: https://openrouter.ai/models
+
+{
+  "model": "acme/gone-model",
+  "expiresOn": null,
+  "similar": [
+    "openrouter/qwen/qwen3-coder/floor",
+    "openrouter/qwen/qwen3.6-max/floor",
+    "openrouter/deepseek/deepseek-v4.1-flash/floor"
+  ]
+}"
+`;

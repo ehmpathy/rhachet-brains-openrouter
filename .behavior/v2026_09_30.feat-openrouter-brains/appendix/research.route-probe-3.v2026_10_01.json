@@ -1,0 +1,313 @@
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "at": 1790886945423,
+  "order": [
+    "open-inference/fp4",
+    "morph/fp8",
+    "sail-research/fp4",
+    "relace",
+    "inference-net",
+    "dekallm",
+    "io-net/fp8",
+    "wafer",
+    "deepinfra/fp8"
+  ],
+  "endpointKeys": [
+    "name",
+    "model_id",
+    "model_name",
+    "context_length",
+    "pricing",
+    "provider_name",
+    "tag",
+    "quantization",
+    "max_completion_tokens",
+    "max_prompt_tokens",
+    "supported_parameters",
+    "supports_tool_choice",
+    "status",
+    "uptime_last_30m",
+    "uptime_last_5m",
+    "uptime_last_1d",
+    "supports_implicit_caching",
+    "native_tools",
+    "supports_voice_cloning",
+    "supports_multiple_audio_references",
+    "supports_image_reference",
+    "latency_last_30m",
+    "throughput_last_30m",
+    "perf_last_30m_by_workload"
+  ],
+  "endpointIdLike": [
+    {
+      "tag": "relace",
+      "id": null
+    },
+    {
+      "tag": "open-inference/fp4",
+      "id": null
+    },
+    {
+      "tag": "inference-net",
+      "id": null
+    },
+    {
+      "tag": "wafer",
+      "id": null
+    },
+    {
+      "tag": "morph/fp8",
+      "id": null
+    },
+    {
+      "tag": "sail-research/fp4",
+      "id": null
+    },
+    {
+      "tag": "ionstream",
+      "id": null
+    },
+    {
+      "tag": "dekallm",
+      "id": null
+    },
+    {
+      "tag": "io-net/fp8",
+      "id": null
+    },
+    {
+      "tag": "deepinfra/fp8",
+      "id": null
+    },
+    {
+      "tag": "streamlake/fp8",
+      "id": null
+    },
+    {
+      "tag": "atlas-cloud/fp8",
+      "id": null
+    },
+    {
+      "tag": "reka",
+      "id": null
+    },
+    {
+      "tag": "alibaba",
+      "id": null
+    },
+    {
+      "tag": "deepseek",
+      "id": null
+    },
+    {
+      "tag": "digitalocean",
+      "id": null
+    },
+    {
+      "tag": "gmicloud/fp8",
+      "id": null
+    },
+    {
+      "tag": "coreweave/fp8",
+      "id": null
+    },
+    {
+      "tag": "nextbit/fp8",
+      "id": null
+    },
+    {
+      "tag": "phala",
+      "id": null
+    },
+    {
+      "tag": "fireworks",
+      "id": null
+    },
+    {
+      "tag": "baidu/fp8",
+      "id": null
+    },
+    {
+      "tag": "baseten/fp8",
+      "id": null
+    },
+    {
+      "tag": "makora/fp8",
+      "id": null
+    },
+    {
+      "tag": "together",
+      "id": null
+    },
+    {
+      "tag": "siliconflow/fp8",
+      "id": null
+    },
+    {
+      "tag": "modal",
+      "id": null
+    },
+    {
+      "tag": "baseten/fp8",
+      "id": null
+    },
+    {
+      "tag": "parasail/fp8",
+      "id": null
+    },
+    {
+      "tag": "novita/fp8",
+      "id": null
+    },
+    {
+      "tag": "venice/fp8",
+      "id": null
+    },
+    {
+      "tag": "fireworks/us",
+      "id": null
+    },
+    {
+      "tag": "baseten/fast",
+      "id": null
+    }
+  ],
+  "results": [
+    {
+      "arm": "order=ORDER, only=ORDER, fallbacks on, burst of 8",
+      "i": 0,
+      "answer": {
+        "status": 200,
+        "id": "gen-1790886905-NkZFwPqrYyH6wu734VW7",
+        "provider": "OpenInference",
+        "cost": 0.0000164
+      },
+      "attempts": [
+        {
+          "provider": "OpenInference",
+          "endpoint_id": "014281e2-a692-4f9a-9ee5-9ba5d6a0d53f",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "arm": "order=ORDER, only=ORDER, fallbacks on, burst of 8",
+      "i": 1,
+      "answer": {
+        "status": 200,
+        "id": "gen-1790886905-zgI9KXvKcNuz1SFAZxor",
+        "provider": "OpenInference",
+        "cost": 0.00001252
+      },
+      "attempts": [
+        {
+          "provider": "OpenInference",
+          "endpoint_id": "014281e2-a692-4f9a-9ee5-9ba5d6a0d53f",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "arm": "order=ORDER, only=ORDER, fallbacks on, burst of 8",
+      "i": 2,
+      "answer": {
+        "status": 200,
+        "id": "gen-1790886905-IxNQruB0yq1ueHbRRGuZ",
+        "provider": "OpenInference",
+        "cost": 0.00001638
+      },
+      "attempts": [
+        {
+          "provider": "OpenInference",
+          "endpoint_id": "014281e2-a692-4f9a-9ee5-9ba5d6a0d53f",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "arm": "order=ORDER, only=ORDER, fallbacks on, burst of 8",
+      "i": 3,
+      "answer": {
+        "status": 200,
+        "id": "gen-1790886905-17ukv1i9ohKwakSFaAmP",
+        "provider": "OpenInference",
+        "cost": 0.00001188
+      },
+      "attempts": [
+        {
+          "provider": "OpenInference",
+          "endpoint_id": "014281e2-a692-4f9a-9ee5-9ba5d6a0d53f",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "arm": "order=ORDER, only=ORDER, fallbacks on, burst of 8",
+      "i": 4,
+      "answer": {
+        "status": 200,
+        "id": "gen-1790886905-g0PeuSERAFoedeUtsRcM",
+        "provider": "OpenInference",
+        "cost": 0.00001644
+      },
+      "attempts": [
+        {
+          "provider": "OpenInference",
+          "endpoint_id": "014281e2-a692-4f9a-9ee5-9ba5d6a0d53f",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "arm": "order=ORDER, only=ORDER, fallbacks on, burst of 8",
+      "i": 5,
+      "answer": {
+        "status": 200,
+        "id": "gen-1790886905-09Qi6i3wJDBt53mhMo40",
+        "provider": "OpenInference",
+        "cost": 0.0000109
+      },
+      "attempts": [
+        {
+          "provider": "OpenInference",
+          "endpoint_id": "014281e2-a692-4f9a-9ee5-9ba5d6a0d53f",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "arm": "order=ORDER, only=ORDER, fallbacks on, burst of 8",
+      "i": 6,
+      "answer": {
+        "status": 200,
+        "id": "gen-1790886906-rsEa50TCyofBgnEJE0qH",
+        "provider": "OpenInference",
+        "cost": 0.00001088
+      },
+      "attempts": [
+        {
+          "provider": "OpenInference",
+          "endpoint_id": "014281e2-a692-4f9a-9ee5-9ba5d6a0d53f",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "arm": "order=ORDER, only=ORDER, fallbacks on, burst of 8",
+      "i": 7,
+      "answer": {
+        "status": 200,
+        "id": "gen-1790886905-DhwjxF5G0RxukIyZBLbf",
+        "provider": "OpenInference",
+        "cost": 0.00001638
+      },
+      "attempts": [
+        {
+          "provider": "OpenInference",
+          "endpoint_id": "014281e2-a692-4f9a-9ee5-9ba5d6a0d53f",
+          "status": 200
+        }
+      ]
+    }
+  ]
+}

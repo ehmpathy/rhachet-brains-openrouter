@@ -1,0 +1,14 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`asOpenRouterCatalogModels a row with no id is drift, and fails loud 1`] = `
+"💥 MalfunctionError: openrouter's /models reply drifted from the shape this package reads. no promise could be checked, so no call was sent.
+
+{
+  "read": "/models",
+  "issues": [
+    "data.0.id: Invalid input: expected string, received undefined",
+    "data.0.created: Invalid input: expected number, received undefined"
+  ],
+  "hint": "openrouter changed its api; update the schema in this package"
+}"
+`;

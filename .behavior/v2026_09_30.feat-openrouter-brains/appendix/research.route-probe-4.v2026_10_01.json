@@ -1,0 +1,166 @@
+{
+  "model": "deepseek/deepseek-v4.1-flash:floor",
+  "at": 1790887071885,
+  "results": [
+    {
+      "arm": ":floor burst",
+      "i": 0,
+      "answer": {
+        "status": 200,
+        "id": "gen-1790887023-7dBm6docnKU095Tt0x34",
+        "provider": "Relace",
+        "cost": 0.0000118032
+      },
+      "attempts": [
+        {
+          "provider": "Relace",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "arm": ":floor burst",
+      "i": 1,
+      "answer": {
+        "status": 200,
+        "id": "gen-1790887023-0tXyCbHjMO38wRAMiYpi",
+        "provider": "Relace",
+        "cost": 0.0000136032
+      },
+      "attempts": [
+        {
+          "provider": "Relace",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "arm": ":floor burst",
+      "i": 2,
+      "answer": {
+        "status": 200,
+        "id": "gen-1790887023-7hYYKuEHakekPB3vW4JJ",
+        "provider": "Relace",
+        "cost": 0.0000202032
+      },
+      "attempts": [
+        {
+          "provider": "Relace",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "arm": ":floor burst",
+      "i": 3,
+      "answer": {
+        "status": 200,
+        "id": "gen-1790887023-tSfI8wjpe6rWlXscSZuX",
+        "provider": "Relace",
+        "cost": 0.0000142032
+      },
+      "attempts": [
+        {
+          "provider": "Relace",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "arm": ":floor burst",
+      "i": 4,
+      "answer": {
+        "status": 200,
+        "id": "gen-1790887023-xzUyemPjNR05V3sP1xCq",
+        "provider": "Relace",
+        "cost": 0.0000142032
+      },
+      "attempts": [
+        {
+          "provider": "Relace",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "arm": ":floor burst",
+      "i": 5,
+      "answer": {
+        "status": 200,
+        "id": "gen-1790887023-9Eu5i2EyeCRb696RFNC2",
+        "provider": "Relace",
+        "cost": 0.0000136032
+      },
+      "attempts": [
+        {
+          "provider": "Relace",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "arm": ":floor series",
+      "i": 6,
+      "answer": {
+        "status": 200,
+        "id": "gen-1790887025-LpkatYPHiMFYRIWM6Uqe",
+        "provider": "Relace",
+        "cost": 0.0000130032
+      },
+      "attempts": [
+        {
+          "provider": "Relace",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "arm": ":floor series",
+      "i": 7,
+      "answer": {
+        "status": 200,
+        "id": "gen-1790887025-oChjh0qe1fDugwsA5UaC",
+        "provider": "Relace",
+        "cost": 0.0000154032
+      },
+      "attempts": [
+        {
+          "provider": "Relace",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "arm": ":floor series",
+      "i": 8,
+      "answer": {
+        "status": 200,
+        "id": "gen-1790887026-PwzW1nScK7N6NrG9Biv2",
+        "provider": "Relace",
+        "cost": 0.0000106032
+      },
+      "attempts": [
+        {
+          "provider": "Relace",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "arm": ":floor series",
+      "i": 9,
+      "answer": {
+        "status": 200,
+        "id": "gen-1790887027-zVYvpbZ3w24qu3b9wtD9",
+        "provider": "Relace",
+        "cost": 0.0000130032
+      },
+      "attempts": [
+        {
+          "provider": "Relace",
+          "status": 200
+        }
+      ]
+    }
+  ]
+}

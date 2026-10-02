@@ -1,0 +1,3 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`readme given: [case1] a key in keyrack, and the readme probe when: [t0] the probe runs, as the readme writes it then: the line a human reads matches snapshot 1`] = `"✔ openrouter answered { output: '(live answer)', cost: '(live charge)' }"`;

@@ -31,7 +31,7 @@ const config: Config = {
   ],
   // resolve ESM modules from node_modules
   extensionsToTreatAsEsm: ['.ts'],
-  testMatch: ['**/*.integration.test.ts', '!**/.yalc/**'],
+  testMatch: ['**/*.integration.test.ts', '!**/.yalc/**', '!**/.agent/**'], // .agent holds cached copies of tests (e.g. rmsafe's trash); never run them
   setupFilesAfterEnv: ['./jest.integration.env.ts'],
 
   // use 50% of threads to leave headroom for other processes

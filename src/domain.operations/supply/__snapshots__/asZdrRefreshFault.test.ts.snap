@@ -1,0 +1,11 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`asZdrRefreshFault a TypeError is a defect held to be thrown, with its cause 1`] = `
+"💥 MalfunctionError: a defect in the background openrouter zdr refresh. report this to rhachet-brains-openrouter.
+
+{
+  "ageMinutes": 90
+}"
+`;
+
+exports[`asZdrRefreshFault a failed read is a warn, never a held defect 1`] = `"💥 MalfunctionError: openrouter zdr refresh failed; the cached index (age 90 min) still serves. a later ask retries. cause: 💥 MalfunctionError: openrouter read failed: 503"`;
