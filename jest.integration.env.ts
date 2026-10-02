@@ -91,7 +91,7 @@ if (requiresTestDb) {
  *   - auto-inject keys into process.env
  *
  * .note = lenient, since the extended role keyracks declare keys this repo
- *         never reads (e.g. the mechanic's FIREWORKS_API_KEY). each test that
+ *         never reads (e.g. the mechanic role's provider key). each test that
  *         needs OPENROUTER_API_KEY still fails loud with a ConstraintError
  */
 const keyrackYmlPath = join(process.cwd(), '.agent/keyrack.yml');
