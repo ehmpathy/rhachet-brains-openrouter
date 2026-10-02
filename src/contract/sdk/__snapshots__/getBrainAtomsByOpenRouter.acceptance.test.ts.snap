@@ -25,6 +25,26 @@ exports[`getBrainAtomsByOpenRouter.acceptance given: [case2] the preferred floor
 }
 `;
 
+exports[`getBrainAtomsByOpenRouter.acceptance given: [case3] an id this package has never heard of when: [t0] it is asked, live, on the floor then: the answer a caller reads matches snapshot 1`] = `
+{
+  "output": "string",
+  "supply": {
+    "attempts": "(live hops; last = served)",
+    "choice": {
+      "funnel": [
+        {
+          "left": "(live count)",
+          "promise": "all endpoints",
+        },
+      ],
+      "ranked": "(live rows, keys: tag, estUsd, tps, verdict)",
+    },
+    "generationId": "(live id)",
+    "provider": "(live host)",
+  },
+}
+`;
+
 exports[`getBrainAtomsByOpenRouter.acceptance given: [case4] a typo of a real id when: [t0] it is asked, live then: the refusal a human reads matches snapshot 1`] = `
 "✋ ConstraintError: openrouter lists no model 'z-ai/glm-5.3-flahs'. no call was sent.
 
