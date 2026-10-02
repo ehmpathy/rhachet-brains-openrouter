@@ -1,6 +1,6 @@
 /**
  * .what = the token counts an openai-compatible response reports
- * .why = fireworks returns these under `usage`, with the cached count nested a
+ * .why = openrouter returns these under `usage`, with the cached count nested a
  *        level deeper and absent on older responses. naming the shape here
  *        keeps that quirk out of the orchestrator.
  */
@@ -17,7 +17,7 @@ type UsageOpenAiCompatible =
  * .why = the two contracts disagree on whether the counts overlap, and the
  *        disagreement is worth real money.
  *
- *        fireworks is openai-compatible, so `prompt_tokens` is the TOTAL prompt
+ *        openrouter is openai-compatible, so `prompt_tokens` is the TOTAL prompt
  *        and `cached_tokens` is a SUBSET of it. rhachet's calcBrainOutputCost
  *        sums input + cache.get as DISJOINT addends. hand it the raw
  *        `prompt_tokens` and every cached token is billed twice: once at the
@@ -29,9 +29,9 @@ type UsageOpenAiCompatible =
  * .note = input is clamped at 0, so a provider inconsistency cannot yield a
  *         negative token count, and thus a negative price.
  *
- * .note = `cache.set` is always 0. fireworks publishes no cache-write rate and
- *         returns no write count — a prompt cache fills as a side effect of the
- *         read path, so no write is billable.
+ * .note = `cache.set` is always 0. no model in this catalog bills a cache
+ *         write — its prompt cache fills as a side effect of the read path. the
+ *         charge openrouter actually bills rides back as `usage.cost`.
  */
 export const asBrainSizeTokens = (input: {
   usage: UsageOpenAiCompatible;

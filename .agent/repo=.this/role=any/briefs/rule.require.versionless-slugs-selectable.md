@@ -6,10 +6,10 @@ every versionless slug is **exported as its own atom, under its own name** — i
 registry, beside the pin it reaches today.
 
 ```
-getBrainAtomsByFireworksAI()
-  fireworks/deepseek/flash           # bare      — the same brain…
-  fireworks/deepseek/flash/latest    # latest    — …the same brain…
-  fireworks/deepseek/flash/v4.1      # pinned    — …the same brain
+getBrainAtomsByOpenRouter()
+  openrouter/deepseek/flash                  # bare      — the same brain…
+  openrouter/deepseek/flash/latest           # latest    — …the same brain…
+  openrouter/deepseek/deepseek-v4.1-flash    # pinned    — …the same brain
 ```
 
 one brain, three names, three atoms. each atom carries the name it was exported under as
@@ -17,60 +17,84 @@ one brain, three names, three atoms. each atom carries the name it was exported 
 
 ## .why — a name a consumer cannot SELECT is a name that does not exist
 
-a consumer never calls `genBrainAtom`. it registers `getBrainAtomsByFireworksAI()` and then
-names a `choice`, which is matched against `atom.slug`. so:
+a consumer never calls `genBrainAtom`. it registers `getBrainAtomsByOpenRouter()` and names a
+`choice`, matched against `atom.slug`. so:
 
 | the name is | in the type union | in the registry | a consumer can choose it |
 |---|---|---|---|
 | accepted and exported | ✔ | ✔ | ✔ |
 | accepted, **not** exported | ✔ | ✘ | 🔴 **no** — the union lies |
 
-⇒ acceptance by `genBrainAtom` proves naught. **the registry is the contract**, because it is
-the only surface a consumer selects from.
+⇒ acceptance by `genBrainAtom` proves naught. **the registry is the contract.**
 
-**measured 2026-09-26.** v0.2.0 shipped every `/latest` slug in the type union and in
-`genBrainAtom`, and left all of them out of the registry "to avoid duplicates". worse, the atom
-renamed itself to the pin it reached. so `choice: 'fireworks/deepseek/flash/latest'` failed with
-the full available list printed beside it, and not one versionless name in it. the names
-`rule.require.versionless-slug-per-tier` exists to offer were the names no consumer could pick.
+**measured 2026-09-26, on this package's predecessor:** a release shipped every `/latest` slug in
+the type union and left all of them out of the registry "to avoid duplicates". a consumer's
+choice failed with the full available list printed beside it — and not one versionless name in
+it.
 
 ## .the two forms — both owed
 
 | form | shape | means |
 |---|---|---|
-| latest | `fireworks/{family}/{tier}/latest` | the current model of that tier |
-| bare | `fireworks/{family}/{tier}` | shorthand for `…/latest`, identically |
+| latest | `openrouter/{author}/{tier}/latest` | the current model of that tier |
+| bare | `openrouter/{author}/{tier}` | shorthand for `…/latest`, identically |
 
-the bare form is derived from the latest union, and `LATEST_BY_BARE_SLUG` maps each to exactly
-`${bare}/latest`. so one re-aim in `PINNED_BY_LATEST_SLUG` re-aims both names.
+`LATEST_BY_BARE_SLUG` maps each bare name to exactly `${bare}/latest`, so one re-aim in
+`PINNED_BY_LATEST_SLUG` re-aims both names.
 
-## .the atom keeps the name it was built from — every form
+## .the atom keeps the name it was built from
 
-`genBrainAtom` sets `atom.slug` to the name it was given — versionless, pinned, legacy, or
-retired. a renamed atom is one no consumer can select by the name they hold. the description
-names the pin it reaches (`fireworks/deepseek/flash -> fireworks/deepseek/flash/v4.1`), so a reader
-still sees the weights. ⇒ the same law for legacy and retired names:
-`rule.require.redirected-slugs-selectable`.
+`genBrainAtom` sets `atom.slug` to the name it was given. the description names the pin it
+reaches (`openrouter/deepseek/flash -> openrouter/deepseek/deepseek-v4.1-flash`), so a reader
+still sees the weights.
+
+## .the same law binds every listed name
+
+pinned, versionless, and listed filtered slugs alike. three guards hold it:
+
+| guard | what it closes |
+|---|---|
+| **the registry is DERIVED** — `getAllAtomSlugs().map(genBrainAtom)` | a name added to any slug map is selectable by construction |
+| **the atom keeps its name** — `slug: input.slug`, never the pin | a renamed atom is one no consumer can find |
+| **a LITERAL clamp** — `SLUGS_PROMISED_FOREVER` | a derived check agrees with a map that lost a row; a literal list does not |
+
+🔴 **a pin openrouter withdraws keeps its atom.** its choice still resolves, and its ask fails with
+`getOneWithdrawnModelError`, which offers live ids — never the bare "brain not found" of an absent
+name. openrouter dates each withdrawal on its catalog (`expiration_date`), so no hand-kept map
+records it.
+
+⚠️ **the bound — unlisted ids.** an unlisted id (`openrouter/acme/new-model`) is accepted and is
+**not** in the registry, by design: the set of openrouter ids is open. it is reached by
+`genBrainAtom({ slug })` until rhachet can route a choice to a pattern.
+
+## .when it fires
+
+| when… | then… |
+|---|---|
+| you add a pin, a tier, or a listed filtered slug | add it to its map AND to `SLUGS_PROMISED_FOREVER` |
+| openrouter dates a pin a tier names | re-aim the tier; the pin and its atom stay |
+| you would remove a name from `SLUGS_PROMISED_FOREVER` | 🔴 forbidden. the list only grows |
+| you would rename an atom to the model it reaches | 🔴 forbidden. put the pin in the description |
+| you would hand-list atoms in `getBrainAtomsByOpenRouter` | 🔴 forbidden. derive them |
+| a consumer reports a name "not accessible" | choose it through `genContextBrain`, never `genBrainAtom` |
 
 ## .enforcement — mechanized
 
-`getBrainAtomsByFireworksAI.unit.test.ts` fails if:
+`getBrainAtomsByOpenRouter.unit.test.ts` fails if:
 
 - any key of `PINNED_BY_LATEST_SLUG` or `LATEST_BY_BARE_SLUG` is absent from the registry
-- the registry differs from every accepted name (it is derived from the slug maps)
+- the registry differs from `SLUGS_PROMISED_FOREVER`
 - a versionless atom's spec differs from the pin it reaches
 
 `index.unit.test.ts` fails if `genBrainAtom` renames a versionless atom to its pin.
 
-- a versionless slug accepted by `genBrainAtom` and absent from the registry = **blocker**
-- a versionless atom whose `slug` is not the name it was built from = **blocker**
+- a listed slug accepted by `genBrainAtom` and absent from the registry = **blocker**
+- an atom whose `slug` is not the name it was built from = **blocker**
 - a bare slug that maps anywhere but `${bare}/latest` = **blocker**
-- a generic added to a registry map with no registry entry = **blocker** (the test catches it)
+- a registry kept by hand rather than derived from the slug maps = **blocker**
+- a name removed from `SLUGS_PROMISED_FOREVER` = **blocker**
 
 ## .see also
 
-- `rule.require.versionless-slug-per-tier` — WHICH generics are owed; this rule says each must be
-  selectable
-- `rule.require.redirected-slugs-selectable` — the same law for legacy and retired names
-- `rule.always.verify-model-ids-by-live-call` — a new alias reaches an extant pin, so it needs no
-  new probe; a re-aim still does
+- `rule.require.versionless-slug-per-tier` — WHICH generics are owed
+- `rule.always.verify-model-ids-by-live-call` — a re-aim still owes a live probe

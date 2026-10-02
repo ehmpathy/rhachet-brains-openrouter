@@ -1,0 +1,212 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`getBrainAtomsByOpenRouter.acceptance given: [case2] the preferred floor, chosen by name and asked live when: [t0] it is asked then: the route report a caller audits matches snapshot 1`] = `
+{
+  "attempts": "(live hops; last = served)",
+  "choice": {
+    "funnel": [
+      {
+        "left": "(live count)",
+        "promise": "all endpoints",
+      },
+      {
+        "left": "(live count)",
+        "promise": "speed>=50tps",
+      },
+      {
+        "left": "(live count)",
+        "promise": "privacy=full (zdr list)",
+      },
+    ],
+    "ranked": "(live rows, keys: tag, estUsd, tps, verdict)",
+  },
+  "costUsd": "(live charge)",
+  "generationId": "(live id)",
+  "provider": "(live host)",
+}
+`;
+
+exports[`getBrainAtomsByOpenRouter.acceptance given: [case3] an id this package has never heard of when: [t0] it is asked, live, with no filters then: the answer a caller reads matches snapshot 1`] = `
+{
+  "output": "string",
+  "route": {
+    "attempts": [],
+    "choice": null,
+    "costUsd": "(live charge)",
+    "generationId": "(live id)",
+    "provider": "(live host)",
+  },
+}
+`;
+
+exports[`getBrainAtomsByOpenRouter.acceptance given: [case4] a typo of a real id when: [t0] it is asked, live then: the refusal a human reads matches snapshot 1`] = `
+"✋ ConstraintError: openrouter lists no model 'z-ai/glm-5.3-flahs'. no call was sent.
+
+did you mean one of these?
+  - openrouter/z-ai/glm-5.3-flash/floor
+  - (a live suggestion)
+  - (a live suggestion)
+  - (a live suggestion)
+  - (a live suggestion)
+
+see every id: https://openrouter.ai/models"
+`;
+
+exports[`getBrainAtomsByOpenRouter.acceptance given: [case5] a slug with an unknown filter word when: [t0] it is asked then: the refusal a human reads matches snapshot 1`] = `
+"✋ ConstraintError: invalid openrouter supply filter 'cheap': unknown word
+
+valid words, joined by '&' in any order:
+  - floor
+  - speed=min{N}tps · speed.min={N}tps
+  - region=usa
+  - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
+  - privacy=full
+  - price.max={N}usd/M
+
+{
+  "word": "cheap"
+}"
+`;
+
+exports[`getBrainAtomsByOpenRouter.acceptance given: [case6] a price bound no endpoint meets when: [t0] it is asked, live then: the refusal a human reads matches snapshot 1`] = `
+"✋ ConstraintError: no endpoint of deepseek/deepseek-v4.1-flash keeps every promise. no call was sent.
+
+    (live count) ← all endpoints
+    (live count) ← price.max=0.0001usd/M
+
+each endpoint, cheapest input rate first, and the promise it fails:
+  (a live endpoint row)
+
+fix: drop or loosen the promise where the count reaches 0"
+`;
+
+exports[`getBrainAtomsByOpenRouter.acceptance given: [case7] a context with no openrouter credential when: [t0] the built atom is asked then: the refusal a human reads matches snapshot 1`] = `
+"✋ ConstraintError: OPENROUTER_API_KEY required — provide via context. no call was sent.
+
+fix: pass genContextBrainSupplier('openrouter', { creds: { keyrack: { owner: 'ehmpath', env: 'prod' } } })"
+`;
+
+exports[`getBrainAtomsByOpenRouter.acceptance given: [case8] the preferred floor, asked for json and for text when: [t0] it is asked with a json schema then: the route report a caller audits matches snapshot 1`] = `
+{
+  "attempts": "(live hops; last = served)",
+  "choice": {
+    "funnel": [
+      {
+        "left": "(live count)",
+        "promise": "all endpoints",
+      },
+      {
+        "left": "(live count)",
+        "promise": "supports(response_format)",
+      },
+      {
+        "left": "(live count)",
+        "promise": "speed>=50tps",
+      },
+      {
+        "left": "(live count)",
+        "promise": "privacy=full (zdr list)",
+      },
+    ],
+    "ranked": "(live rows, keys: tag, estUsd, tps, verdict)",
+  },
+  "costUsd": "(live charge)",
+  "generationId": "(live id)",
+  "provider": "(live host)",
+}
+`;
+
+exports[`getBrainAtomsByOpenRouter.acceptance given: [case9] a model that cannot honor a json schema when: [t0] it is asked on the floor with a json schema, live then: the refusal a human reads matches snapshot 1`] = `
+"✋ ConstraintError: no endpoint of (a live model id) keeps every promise. no call was sent.
+
+    (live count) ← all endpoints
+    (live count) ← supports(response_format)
+
+each endpoint, cheapest input rate first, and the promise it fails:
+  (a live endpoint row)
+
+fix: no endpoint honors a json schema. ask for a z.string() reply, or choose another model"
+`;
+
+exports[`getBrainAtomsByOpenRouter.acceptance given: [case10] a slug that is neither listed nor an openrouter id when: [t0] it is asked then: the refusal a human reads matches snapshot 1`] = `
+"✋ ConstraintError: 'openrouter/acme' names no openrouter model.
+
+name one of these, each with an optional /{filters} segment:
+  - a listed slug:
+      openrouter/deepseek/deepseek-v4-pro-0813
+      openrouter/deepseek/deepseek-v4.1-flash
+      openrouter/moonshotai/kimi-k3
+      openrouter/z-ai/glm-5.3
+      openrouter/z-ai/glm-5.3-flash
+      openrouter/deepseek/pro/latest
+      openrouter/deepseek/flash/latest
+      openrouter/moonshotai/pro/latest
+      openrouter/z-ai/pro/latest
+      openrouter/z-ai/flash/latest
+      openrouter/deepseek/pro
+      openrouter/deepseek/flash
+      openrouter/moonshotai/pro
+      openrouter/z-ai/pro
+      openrouter/z-ai/flash
+  - any openrouter id: openrouter/{author}/{model}, e.g. openrouter/z-ai/glm-5.3
+
+{
+  "slug": "openrouter/acme",
+  "valid": [
+    "openrouter/deepseek/deepseek-v4-pro-0813",
+    "openrouter/deepseek/deepseek-v4.1-flash",
+    "openrouter/moonshotai/kimi-k3",
+    "openrouter/z-ai/glm-5.3",
+    "openrouter/z-ai/glm-5.3-flash",
+    "openrouter/deepseek/pro/latest",
+    "openrouter/deepseek/flash/latest",
+    "openrouter/moonshotai/pro/latest",
+    "openrouter/z-ai/pro/latest",
+    "openrouter/z-ai/flash/latest",
+    "openrouter/deepseek/pro",
+    "openrouter/deepseek/flash",
+    "openrouter/moonshotai/pro",
+    "openrouter/z-ai/pro",
+    "openrouter/z-ai/flash"
+  ]
+}"
+`;
+
+exports[`getBrainAtomsByOpenRouter.acceptance given: [case11] a key openrouter does not recognize when: [t0] the built atom is asked, live then: the refusal a human reads matches snapshot 1`] = `
+"✋ ConstraintError: openrouter rejected the OPENROUTER_API_KEY. please check the key.
+
+fix: mint a key at https://openrouter.ai/settings/keys, then
+     rhx keyrack fill --owner ehmpath --env <env> --key OPENROUTER_API_KEY --refresh"
+`;
+
+exports[`getBrainAtomsByOpenRouter.acceptance given: [case12] a tool execution that breaks its own contract when: [t0] it is handed back to the built atom then: the refusal a human reads matches snapshot 1`] = `
+"✋ ConstraintError: tool execution 'call-1' signaled 'error:constraint' with no error in its output
+
+{
+  "exid": "call-1",
+  "slug": "getWaveReport",
+  "hint": "a failed execution must carry output: { error: new Error(...) }"
+}"
+`;
+
+exports[`getBrainAtomsByOpenRouter.acceptance given: [case13] a price bound a host meets, asked live via the built package when: [t0] it is asked then: the route report a caller audits matches snapshot 1`] = `
+{
+  "attempts": "(live hops; last = served)",
+  "choice": {
+    "funnel": [
+      {
+        "left": "(live count)",
+        "promise": "all endpoints",
+      },
+      {
+        "left": "(live count)",
+        "promise": "price.max=1usd/M",
+      },
+    ],
+    "ranked": "(live rows, keys: tag, estUsd, tps, verdict)",
+  },
+  "costUsd": "(live charge)",
+  "generationId": "(live id)",
+  "provider": "(live host)",
+}
+`;

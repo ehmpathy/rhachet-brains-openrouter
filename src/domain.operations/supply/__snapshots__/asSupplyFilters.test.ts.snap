@@ -1,0 +1,145 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`asSupplyFilters refuses: both speed forms at once 1`] = `
+"✋ ConstraintError: invalid openrouter supply filter 'speed=min50tps&speed.min=50tps': 'speed' written twice
+
+valid words, joined by '&' in any order:
+  - floor
+  - speed=min{N}tps · speed.min={N}tps
+  - region=usa
+  - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
+  - privacy=full
+  - price.max={N}usd/M
+
+{
+  "word": "speed=min50tps&speed.min=50tps"
+}"
+`;
+
+exports[`asSupplyFilters refuses: floor with a value 1`] = `
+"✋ ConstraintError: invalid openrouter supply filter 'floor=yes': unknown word or value
+
+valid words, joined by '&' in any order:
+  - floor
+  - speed=min{N}tps · speed.min={N}tps
+  - region=usa
+  - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
+  - privacy=full
+  - price.max={N}usd/M
+
+{
+  "word": "floor=yes"
+}"
+`;
+
+exports[`asSupplyFilters refuses: privacy other than full 1`] = `
+"✋ ConstraintError: invalid openrouter supply filter 'privacy=some': unknown word or value
+
+valid words, joined by '&' in any order:
+  - floor
+  - speed=min{N}tps · speed.min={N}tps
+  - region=usa
+  - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
+  - privacy=full
+  - price.max={N}usd/M
+
+{
+  "word": "privacy=some"
+}"
+`;
+
+exports[`asSupplyFilters refuses: region other than usa 1`] = `
+"✋ ConstraintError: invalid openrouter supply filter 'region=eu': unknown word or value
+
+valid words, joined by '&' in any order:
+  - floor
+  - speed=min{N}tps · speed.min={N}tps
+  - region=usa
+  - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
+  - privacy=full
+  - price.max={N}usd/M
+
+{
+  "word": "region=eu"
+}"
+`;
+
+exports[`asSupplyFilters refuses: speed without unit 1`] = `
+"✋ ConstraintError: invalid openrouter supply filter 'speed=min50': expected min{N}tps
+
+valid words, joined by '&' in any order:
+  - floor
+  - speed=min{N}tps · speed.min={N}tps
+  - region=usa
+  - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
+  - privacy=full
+  - price.max={N}usd/M
+
+{
+  "word": "speed=min50"
+}"
+`;
+
+exports[`asSupplyFilters refuses: speed.min with the min prefix 1`] = `
+"✋ ConstraintError: invalid openrouter supply filter 'speed.min=min50tps': expected {N}tps
+
+valid words, joined by '&' in any order:
+  - floor
+  - speed=min{N}tps · speed.min={N}tps
+  - region=usa
+  - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
+  - privacy=full
+  - price.max={N}usd/M
+
+{
+  "word": "speed.min=min50tps"
+}"
+`;
+
+exports[`asSupplyFilters refuses: stray & 1`] = `
+"✋ ConstraintError: invalid openrouter supply filter 'floor&': empty word (stray '&')
+
+valid words, joined by '&' in any order:
+  - floor
+  - speed=min{N}tps · speed.min={N}tps
+  - region=usa
+  - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
+  - privacy=full
+  - price.max={N}usd/M
+
+{
+  "word": "floor&"
+}"
+`;
+
+exports[`asSupplyFilters refuses: unknown precision 1`] = `
+"✋ ConstraintError: invalid openrouter supply filter 'precision=fp9': unknown precision
+
+valid words, joined by '&' in any order:
+  - floor
+  - speed=min{N}tps · speed.min={N}tps
+  - region=usa
+  - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
+  - privacy=full
+  - price.max={N}usd/M
+
+{
+  "word": "precision=fp9"
+}"
+`;
+
+exports[`asSupplyFilters refuses: unknown word 1`] = `
+"✋ ConstraintError: invalid openrouter supply filter 'cheap': unknown word
+
+valid words, joined by '&' in any order:
+  - floor
+  - speed=min{N}tps · speed.min={N}tps
+  - region=usa
+  - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
+  - privacy=full
+  - price.max={N}usd/M
+
+{
+  "word": "cheap"
+}"
+`;

@@ -13,8 +13,8 @@ on:
         type: string
         default: "us-east-1"
     secrets:
-      fireworks-api-key:
-        description: "api key for fireworks ai, used in integration tests"
+      openrouter-api-key:
+        description: "api key for openrouter, used in integration and acceptance tests"
         required: true
 
 permissions:
@@ -186,7 +186,7 @@ jobs:
       - name: test:integration
         run: THOROUGH=true npm run test:integration
         env:
-          FIREWORKS_API_KEY: ${{ secrets.fireworks-api-key }}
+          OPENROUTER_API_KEY: ${{ secrets.openrouter-api-key }}
 
   test-acceptance-locally:
     runs-on: ubuntu-24.04
@@ -225,4 +225,4 @@ jobs:
       - name: test:acceptance:locally
         run: THOROUGH=true npm run test:acceptance:locally --if-present
         env:
-          FIREWORKS_API_KEY: ${{ secrets.fireworks-api-key }}
+          OPENROUTER_API_KEY: ${{ secrets.openrouter-api-key }}

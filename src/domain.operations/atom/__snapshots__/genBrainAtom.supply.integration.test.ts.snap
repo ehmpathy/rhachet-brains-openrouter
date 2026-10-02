@@ -1,0 +1,209 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`genBrainAtom.supply.integration given: [case1] the agreed reviewer floor: floor&speed=min50tps&privacy=full when: [t0] asked with a json schema then: the supply report a caller audits matches snapshot 1`] = `
+{
+  "attempts": "(live hops; last = served)",
+  "choice": {
+    "funnel": [
+      {
+        "left": "(live count)",
+        "promise": "all endpoints",
+      },
+      {
+        "left": "(live count)",
+        "promise": "supports(response_format,structured_outputs)",
+      },
+      {
+        "left": "(live count)",
+        "promise": "speed>=50tps",
+      },
+      {
+        "left": "(live count)",
+        "promise": "privacy=full (zdr list)",
+      },
+    ],
+    "ranked": "(live rows, keys: tag, estUsd, tps, verdict)",
+    "tokensEstimate": {
+      "input": 16,
+    },
+  },
+  "generationId": "(live id)",
+  "provider": "(live host)",
+}
+`;
+
+exports[`genBrainAtom.supply.integration given: [case2] the other speed form: speed.min=50tps when: [t0] asked then: the supply report a caller audits matches snapshot 1`] = `
+{
+  "attempts": "(live hops; last = served)",
+  "choice": {
+    "funnel": [
+      {
+        "left": "(live count)",
+        "promise": "all endpoints",
+      },
+      {
+        "left": "(live count)",
+        "promise": "supports(response_format,structured_outputs)",
+      },
+      {
+        "left": "(live count)",
+        "promise": "speed>=50tps",
+      },
+      {
+        "left": "(live count)",
+        "promise": "privacy=full (zdr list)",
+      },
+    ],
+    "ranked": "(live rows, keys: tag, estUsd, tps, verdict)",
+    "tokensEstimate": {
+      "input": 16,
+    },
+  },
+  "generationId": "(live id)",
+  "provider": "(live host)",
+}
+`;
+
+exports[`genBrainAtom.supply.integration given: [case3] the bare slug, via the default supply filters when: [t0] asked then: the supply report a caller audits matches snapshot 1`] = `
+{
+  "attempts": "(live hops; last = served)",
+  "choice": {
+    "funnel": [
+      {
+        "left": "(live count)",
+        "promise": "all endpoints",
+      },
+      {
+        "left": "(live count)",
+        "promise": "supports(response_format,structured_outputs)",
+      },
+      {
+        "left": "(live count)",
+        "promise": "speed>=50tps",
+      },
+      {
+        "left": "(live count)",
+        "promise": "privacy=full (zdr list)",
+      },
+    ],
+    "ranked": "(live rows, keys: tag, estUsd, tps, verdict)",
+    "tokensEstimate": {
+      "input": 16,
+    },
+  },
+  "generationId": "(live id)",
+  "provider": "(live host)",
+}
+`;
+
+exports[`genBrainAtom.supply.integration given: [case4] a review-shaped text ask on the floor: long input, z.string() reply when: [t0] asked then: the supply report a caller audits matches snapshot 1`] = `
+{
+  "attempts": "(live hops; last = served)",
+  "choice": {
+    "funnel": [
+      {
+        "left": "(live count)",
+        "promise": "all endpoints",
+      },
+      {
+        "left": "(live count)",
+        "promise": "speed>=50tps",
+      },
+      {
+        "left": "(live count)",
+        "promise": "privacy=full (zdr list)",
+      },
+    ],
+    "ranked": "(live rows, keys: tag, estUsd, tps, verdict)",
+    "tokensEstimate": {
+      "input": 22142,
+    },
+  },
+  "generationId": "(live id)",
+  "provider": "(live host)",
+}
+`;
+
+exports[`genBrainAtom.supply.integration given: [case5] a price bound: floor&price.max=1usd/M when: [t0] asked then: the supply report a caller audits matches snapshot 1`] = `
+{
+  "attempts": "(live hops; last = served)",
+  "choice": {
+    "funnel": [
+      {
+        "left": "(live count)",
+        "promise": "all endpoints",
+      },
+      {
+        "left": "(live count)",
+        "promise": "supports(response_format,structured_outputs)",
+      },
+      {
+        "left": "(live count)",
+        "promise": "price.max=1usd/M",
+      },
+    ],
+    "ranked": "(live rows, keys: tag, estUsd, tps, verdict)",
+    "tokensEstimate": {
+      "input": 16,
+    },
+  },
+  "generationId": "(live id)",
+  "provider": "(live host)",
+}
+`;
+
+exports[`genBrainAtom.supply.integration given: [case6] a filter with no floor: privacy=full when: [t0] asked then: the supply report a caller audits matches snapshot 1`] = `
+{
+  "attempts": [],
+  "choice": {
+    "funnel": [
+      {
+        "left": "(live count)",
+        "promise": "all endpoints",
+      },
+      {
+        "left": "(live count)",
+        "promise": "supports(response_format,structured_outputs)",
+      },
+      {
+        "left": "(live count)",
+        "promise": "privacy=full (zdr list)",
+      },
+    ],
+    "ranked": "(live rows, keys: tag, estUsd, tps, verdict)",
+    "tokensEstimate": {
+      "input": 16,
+    },
+  },
+  "generationId": "(live id)",
+  "provider": "(live host)",
+}
+`;
+
+exports[`genBrainAtom.supply.integration given: [case7] a precision promise: floor&precision=fp8 when: [t0] asked then: the supply report a caller audits matches snapshot 1`] = `
+{
+  "attempts": "(live hops; last = served)",
+  "choice": {
+    "funnel": [
+      {
+        "left": "(live count)",
+        "promise": "all endpoints",
+      },
+      {
+        "left": "(live count)",
+        "promise": "supports(response_format,structured_outputs)",
+      },
+      {
+        "left": "(live count)",
+        "promise": "precision=fp8",
+      },
+    ],
+    "ranked": "(live rows, keys: tag, estUsd, tps, verdict)",
+    "tokensEstimate": {
+      "input": 16,
+    },
+  },
+  "generationId": "(live id)",
+  "provider": "(live host)",
+}
+`;

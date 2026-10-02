@@ -1,7 +1,19 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
-exports[`genBrainAtom.integration given: [case10] error paths when: [t0] tools plugged with non-string schema then: throws BadRequestError with helpful message 1`] = `
-"BadRequestError: when tools are plugged, output schema must be z.string() (found: object). most open-source models support either tool_calls or structured json, but not both. use z.string() and parse the response yourself if structure is needed.
+exports[`genBrainAtom.integration given: [case5] tool invocation when: [t0] tools plugged, prompt requires tool use then: the calls shape a caller reads matches snapshot 1`] = `
+[
+  {
+    "exid": "(live id)",
+    "inputKeys": [
+      "city",
+    ],
+    "slug": "weather.lookup",
+  },
+]
+`;
+
+exports[`genBrainAtom.integration given: [case10] error paths when: [t0] tools plugged with non-string schema then: throws ConstraintError with helpful message 1`] = `
+"✋ ConstraintError: when tools are plugged, output schema must be z.string() (found: object). most open-source models support either tool_calls or structured json, but not both. use z.string() and parse the response yourself if structure is needed.
 
 {
   "schemaType": "object",
@@ -9,4 +21,10 @@ exports[`genBrainAtom.integration given: [case10] error paths when: [t0] tools p
     "weather.lookup"
   ]
 }"
+`;
+
+exports[`genBrainAtom.integration given: [case10] error paths when: [t1] no credentials in context then: throws ConstraintError that names the fix 1`] = `
+"✋ ConstraintError: OPENROUTER_API_KEY required — provide via context. no call was sent.
+
+fix: pass genContextBrainSupplier('openrouter', { creds: { keyrack: { owner: 'ehmpath', env: 'prod' } } })"
 `;

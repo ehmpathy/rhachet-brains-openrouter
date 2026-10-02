@@ -1,0 +1,3 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`sdkOpenRouterEndpoints.integration given: [case5] an endpoints read openrouter refuses when: [t0] the read runs twice then: the headline a human reads matches snapshot 1`] = `"💥 MalfunctionError: openrouter read failed: GET /models/acme/absent-model-for-a-read-failure/endpoints → 404. no promise could be checked, so no call was sent. a retry is safe."`;

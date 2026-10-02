@@ -1,0 +1,98 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`getOneReplyDefectError a 200 body with an error in place of choices is refused, and quotes openrouter 1`] = `
+"💥 MalfunctionError: openrouter returned no usable reply (finish_reason=none, 0 chars). the upstream provider likely failed mid-reply.
+openrouter said: Provider returned error
+
+fix: retry the ask. if it recurs, admit other providers via filters, or choose another model
+audit: https://openrouter.ai/activity — generation gen-1, provider DeepInfra
+
+{
+  "finishReason": null,
+  "provider": "DeepInfra",
+  "generationId": "gen-1",
+  "contentLength": 0,
+  "tokensOutput": null,
+  "errorMessage": "Provider returned error"
+}"
+`;
+
+exports[`getOneReplyDefectError a prose reply where json is owed is refused, and names the host 1`] = `
+"💥 MalfunctionError: openrouter's host DeepInfra ignored the json schema asked for, and replied in plain text (21 chars). the reply is withheld.
+
+fix: ask via a floor slug — the floor walk steps past a host that answers prose, and skips it for 7 days. or ask for z.string() and parse the reply yourself
+audit: https://openrouter.ai/activity — generation gen-1, provider DeepInfra
+
+{
+  "finishReason": "stop",
+  "provider": "DeepInfra",
+  "generationId": "gen-1",
+  "contentLength": 21,
+  "tokensOutput": 0,
+  "errorMessage": null
+}"
+`;
+
+exports[`getOneReplyDefectError a provider that failed mid-reply is refused, even for a string ask 1`] = `
+"💥 MalfunctionError: openrouter returned no usable reply (finish_reason=error, 0 chars). the upstream provider likely failed mid-reply.
+
+fix: retry the ask. if it recurs, admit other providers via filters, or choose another model
+audit: https://openrouter.ai/activity — generation gen-1, provider DeepInfra
+
+{
+  "finishReason": "error",
+  "provider": "DeepInfra",
+  "generationId": "gen-1",
+  "contentLength": 0,
+  "tokensOutput": 0,
+  "errorMessage": null
+}"
+`;
+
+exports[`getOneReplyDefectError a reply cut at the output limit is refused, as partial 1`] = `
+"💥 MalfunctionError: openrouter's reply was cut off at the output limit (finish_reason=length), after 0 output tokens. the partial reply is withheld.
+
+fix: ask for a shorter reply, or choose a model with a larger output limit
+audit: https://openrouter.ai/activity — generation gen-1, provider DeepInfra
+
+{
+  "finishReason": "length",
+  "provider": "DeepInfra",
+  "generationId": "gen-1",
+  "contentLength": 12,
+  "tokensOutput": 0,
+  "errorMessage": null
+}"
+`;
+
+exports[`getOneReplyDefectError a reply with no finish reason is refused 1`] = `
+"💥 MalfunctionError: openrouter returned no usable reply (finish_reason=none, 0 chars). the upstream provider likely failed mid-reply.
+
+fix: retry the ask. if it recurs, admit other providers via filters, or choose another model
+audit: https://openrouter.ai/activity — generation gen-1, provider DeepInfra
+
+{
+  "finishReason": null,
+  "provider": "DeepInfra",
+  "generationId": "gen-1",
+  "contentLength": 0,
+  "tokensOutput": 0,
+  "errorMessage": null
+}"
+`;
+
+exports[`getOneReplyDefectError an empty reply where json is owed is refused 1`] = `
+"💥 MalfunctionError: openrouter returned no usable reply (finish_reason=stop, 0 chars). the host replied empty where a json schema was owed.
+
+fix: retry the ask. if it recurs, admit other providers via filters, or choose another model
+audit: https://openrouter.ai/activity — generation gen-1, provider DeepInfra
+
+{
+  "finishReason": "stop",
+  "provider": "DeepInfra",
+  "generationId": "gen-1",
+  "contentLength": 0,
+  "tokensOutput": 0,
+  "errorMessage": null
+}"
+`;

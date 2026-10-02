@@ -1,0 +1,81 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`asAtomTarget given: [case3] a slug that names no model when: [t0] the literal pattern is named then: it is refused at parse, and names the shape to fill 1`] = `
+"✋ ConstraintError: 'openrouter/*/*/*' is a routed pattern, not a model. fill the shape openrouter/{author}/{model}[/{filters}], e.g. openrouter/deepseek/flash/floor
+
+{
+  "slug": "openrouter/*/*/*"
+}"
+`;
+
+exports[`asAtomTarget given: [case3] a slug that names no model when: [t1] a slug of the wrong shape is named then: each is refused, and names both forms that would work 1`] = `
+"✋ ConstraintError: 'invalid/slug' names no openrouter model.
+
+name one of these, each with an optional /{filters} segment:
+  - a tier:
+      openrouter/deepseek/pro
+      openrouter/deepseek/flash
+      openrouter/moonshotai/pro
+      openrouter/z-ai/pro
+      openrouter/z-ai/flash
+  - any openrouter id: openrouter/{author}/{model}, e.g. openrouter/z-ai/glm-5.3
+
+{
+  "slug": "invalid/slug",
+  "valid": [
+    "openrouter/deepseek/pro",
+    "openrouter/deepseek/flash",
+    "openrouter/moonshotai/pro",
+    "openrouter/z-ai/pro",
+    "openrouter/z-ai/flash"
+  ]
+}"
+`;
+
+exports[`asAtomTarget given: [case3] a slug that names no model when: [t1] a slug of the wrong shape is named then: each is refused, and names both forms that would work 2`] = `
+"✋ ConstraintError: 'openrouter/acme' names no openrouter model.
+
+name one of these, each with an optional /{filters} segment:
+  - a tier:
+      openrouter/deepseek/pro
+      openrouter/deepseek/flash
+      openrouter/moonshotai/pro
+      openrouter/z-ai/pro
+      openrouter/z-ai/flash
+  - any openrouter id: openrouter/{author}/{model}, e.g. openrouter/z-ai/glm-5.3
+
+{
+  "slug": "openrouter/acme",
+  "valid": [
+    "openrouter/deepseek/pro",
+    "openrouter/deepseek/flash",
+    "openrouter/moonshotai/pro",
+    "openrouter/z-ai/pro",
+    "openrouter/z-ai/flash"
+  ]
+}"
+`;
+
+exports[`asAtomTarget given: [case3] a slug that names no model when: [t1] a slug of the wrong shape is named then: each is refused, and names both forms that would work 3`] = `
+"✋ ConstraintError: 'anthropic/acme/model' names no openrouter model.
+
+name one of these, each with an optional /{filters} segment:
+  - a tier:
+      openrouter/deepseek/pro
+      openrouter/deepseek/flash
+      openrouter/moonshotai/pro
+      openrouter/z-ai/pro
+      openrouter/z-ai/flash
+  - any openrouter id: openrouter/{author}/{model}, e.g. openrouter/z-ai/glm-5.3
+
+{
+  "slug": "anthropic/acme/model",
+  "valid": [
+    "openrouter/deepseek/pro",
+    "openrouter/deepseek/flash",
+    "openrouter/moonshotai/pro",
+    "openrouter/z-ai/pro",
+    "openrouter/z-ai/flash"
+  ]
+}"
+`;

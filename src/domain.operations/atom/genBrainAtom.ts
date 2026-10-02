@@ -1,4 +1,4 @@
-import { BadRequestError } from 'helpful-errors';
+import { ConstraintError, UnexpectedCodePathError } from 'helpful-errors';
 import OpenAI from 'openai';
 import type { ContextBrainSupplier } from 'rhachet';
 import {
@@ -18,81 +18,90 @@ import type { Artifact } from 'rhachet-artifact';
 import type { GitFile } from 'rhachet-artifact-git';
 import { z } from 'zod';
 
-import { asBrainSizeTokens } from '../../infra/cast/asBrainSizeTokens';
-import { castContentToOutputSchema } from '../../infra/cast/castContentToOutputSchema';
-import { castFromFireworksToolCall } from '../../infra/cast/castFromFireworksToolCall';
-import { castIntoFireworksToolDef } from '../../infra/cast/castIntoFireworksToolDef';
-import { castIntoFireworksToolMessages } from '../../infra/cast/castIntoFireworksToolMessages';
-import {
-  type BrainSuppliesFireworks,
-  CONFIG_BY_ATOM_SLUG,
-} from './BrainAtom.config';
-import { getOnePromptCacheAffinityKey } from './getOnePromptCacheAffinityKey';
-import type { BrainAtomSlugFireworks } from './slug/AtomSlug';
-import { asPinnedAtomSlug } from './slug/asPinnedAtomSlug';
-import { getOneRetirementError } from './slug/getOneRetirementError';
+import { asBrainPlugToolInvocationFromOpenRouter } from '../../infra/cast/asBrainPlugToolInvocationFromOpenRouter';
+import { asOpenRouterMessages } from '../../infra/cast/asOpenRouterMessages';
+import { asOpenRouterToolDef } from '../../infra/cast/asOpenRouterToolDef';
+import { asOutputFromContent } from '../../infra/cast/asOutputFromContent';
+import { asToolSlugByName } from '../../infra/cast/asToolSlugByName';
+import { isStringLikeJsonSchema } from '../../infra/cast/isStringLikeJsonSchema';
+import { asReplyChoice } from '../supply/asReplyChoice';
+import { getOneSuppliedCompletion } from '../supply/getOneSuppliedCompletion';
+import { sdkOpenRouterEndpoints } from '../supply/sdkOpenRouterEndpoints';
+import { asAskNeeds } from './asAskNeeds';
+import { asAtomTarget } from './asAtomTarget';
+import { asBrainSizeForAsk } from './asBrainSizeForAsk';
+import { asCashWithSupplyTotal } from './asCashWithSupplyTotal';
+import { asPromptText } from './asPromptText';
+import type { BrainSuppliesOpenRouter } from './BrainAtom.config';
+import { getOneAskErrorNamed } from './getOneAskErrorNamed';
+import { getOneCatalogModel } from './getOneCatalogModel';
+import { getOneTierModel } from './getOneTierModel';
+import type {
+  BrainAtomSlugOpenRouter,
+  BrainAtomSlugOpenRouterFiltered,
+} from './slug/AtomSlug';
+import type { BrainAtomSlugOpenRouterUnlisted } from './slug/AtomSlug.unlisted';
 
 // re-export for consumers
-export type { BrainSuppliesFireworks } from './BrainAtom.config';
-export type { BrainAtomSlugFireworks } from './slug/AtomSlug';
+export type { BrainSuppliesOpenRouter } from './BrainAtom.config';
+export type {
+  BrainAtomSlugOpenRouter,
+  BrainAtomSlugOpenRouterFiltered,
+} from './slug/AtomSlug';
+export type { BrainAtomSlugOpenRouterUnlisted } from './slug/AtomSlug.unlisted';
 
 /**
- * .what = typed context for fireworks brain supplier
- * .why = enables type-safe credential injection via genContextBrainSupplier('fireworks', ...)
+ * .what = typed context for the openrouter brain supplier
+ * .why = enables type-safe credential injection via genContextBrainSupplier('openrouter', ...)
  */
-export type ContextBrainSupplierFireworks = ContextBrainSupplier<
-  'fireworks',
-  BrainSuppliesFireworks
+export type ContextBrainSupplierOpenRouter = ContextBrainSupplier<
+  'openrouter',
+  BrainSuppliesOpenRouter
 >;
 
 /**
- * .what = factory to generate fireworks ai brain atom instances
+ * .what = factory to generate openrouter brain atom instances
  * .why = enables model variant selection via slug
  *
- * .note = fireworks ai api is openai-compatible with baseURL override
+ * .note = the openrouter api is openai-compatible with a baseURL override
  *
- * .note = the slug a caller names is RESOLVED before lookup, so a retired slug
- *         and a versionless generic both reach a live model with no edit on
- *         the caller's side (`asPinnedAtomSlug`).
+ * .note = a tier slug reaches the newest model of its line, read from
+ *         openrouter's catalog at ask and held 7 days on this machine
+ *         (`getOneTierModel`). no version lives in this package
  *
  * .example
- *   genBrainAtom({ slug: 'fireworks/deepseek/flash' })        // bare versionless, never churns
- *   genBrainAtom({ slug: 'fireworks/deepseek/flash/latest' }) // versionless, never churns
- *   genBrainAtom({ slug: 'fireworks/deepseek/flash/v4.1' })   // pinned, byte-stable
- *   genBrainAtom({ slug: 'fireworks/deepseek/flash/v4' })     // retired -> routed to v4.1-flash
- *   genBrainAtom({ slug: 'fireworks/deepseek/v4-flash' })     // legacy -> flash/v4 -> routed to v4.1-flash
+ *   genBrainAtom({ slug: 'openrouter/deepseek/flash' })                 // a tier: floor, ≥ 50 tps, full privacy
+ *   genBrainAtom({ slug: 'openrouter/deepseek/flash/region=usa' })      // a tier, with filters of its own
+ *   genBrainAtom({ slug: 'openrouter/acme/new-model' })                 // any openrouter id, unlisted, no release
+ *
+ * .note = an unlisted id is checked against openrouter's catalog at ask time,
+ *         before any spend. every spec is an estimate; the real charge lands
+ *         in `metrics.cost.cash.total`
  *
  * .note = every atom carries the name it was built from as `atom.slug`, so a
- *         consumer who selects by that name finds it, and reaches the pin.
+ *         consumer who selects by that name finds it.
  */
 export const genBrainAtom = (input: {
-  slug: BrainAtomSlugFireworks;
-}): BrainAtom<ContextBrainSupplierFireworks> => {
-  // resolve the named slug onto the pinned slug that serves it
-  const slug = asPinnedAtomSlug({ slug: input.slug });
-
-  // guard for invalid slug (runtime protection for js callers)
-  const config = CONFIG_BY_ATOM_SLUG[slug];
-  const validSlugs = Object.keys(CONFIG_BY_ATOM_SLUG);
-  if (!config)
-    throw new BadRequestError(
-      `invalid fireworks brain atom slug: '${input.slug}'. valid slugs: ${validSlugs.join(', ')}`,
-      { slug: input.slug, valid: validSlugs },
-    );
+  slug:
+    | BrainAtomSlugOpenRouter
+    | BrainAtomSlugOpenRouterFiltered
+    | BrainAtomSlugOpenRouterUnlisted;
+}): BrainAtom<ContextBrainSupplierOpenRouter> => {
+  // cast the slug onto the model it names; a bad slug is refused here
+  const target = asAtomTarget({ slug: input.slug });
 
   return new BrainAtom({
-    repo: 'fireworks',
-    // 🔴 .note = the atom keeps the EXACT name it was built from — pinned,
-    //         versionless, legacy, or retired-and-routed alike. a registry
-    //         selects by `atom.slug`, so a renamed atom is one no consumer can
-    //         choose by the name they hold (`rule.require.redirected-slugs-selectable`).
-    //         the description names the pin it reaches, so no log hides the weights.
+    repo: 'openrouter',
+    // 🔴 .note = the atom keeps the EXACT name it was built from — tier,
+    //         filtered, or unlisted alike. a registry selects by `atom.slug`,
+    //         so a renamed atom is one no consumer can choose by the name they
+    //         hold (`rule.require.versionless-slugs-selectable`). the model it
+    //         reached rides back in `output.supply`
     slug: input.slug,
-    description:
-      input.slug === slug
-        ? config.description
-        : `${config.description} (${input.slug} -> ${slug})`,
-    spec: config.spec,
+    description: target.description,
+    // .note = the rate is an ESTIMATE; the served endpoint's charge lands in
+    //         `metrics.cost.cash.total` after the ask
+    spec: target.spec,
 
     /**
      * .what = stateless inference with optional tool use
@@ -110,7 +119,7 @@ export const genBrainAtom = (input: {
         prompt: string | BrainPlugToolExecution[];
         schema: { output: z.Schema<TOutput> };
       },
-      context?: ContextBrainSupplierFireworks,
+      context?: ContextBrainSupplierOpenRouter,
     ): Promise<BrainOutput<TOutput, 'atom', TPlugs>> => {
       // track start time for elapsed duration
       const startedAt = Date.now();
@@ -121,70 +130,63 @@ export const genBrainAtom = (input: {
         : undefined;
 
       // get credentials via context (keyrack shorthand or getter)
-      const supplier = context?.['brain.supplier.fireworks'];
+      const supplier = context?.['brain.supplier.openrouter'];
       if (!supplier?.creds)
-        throw new BadRequestError(
-          'FIREWORKS_API_KEY required — provide via context',
+        throw new ConstraintError(
+          [
+            'OPENROUTER_API_KEY required — provide via context. no call was sent.',
+            '',
+            "fix: pass genContextBrainSupplier('openrouter', { creds: { keyrack: { owner: 'ehmpath', env: 'prod' } } })",
+          ].join('\n'),
         );
       const creds = await getSdkCredsFromBrainSupplies({
         creds: supplier.creds,
-        keys: ['FIREWORKS_API_KEY'],
+        keys: ['OPENROUTER_API_KEY'],
       });
       const openai = new OpenAI({
-        apiKey: creds.FIREWORKS_API_KEY,
-        baseURL: 'https://api.fireworks.ai/inference/v1',
+        apiKey: creds.OPENROUTER_API_KEY,
+        baseURL: 'https://openrouter.ai/api/v1',
       });
 
-      // build messages array with prior exchanges for continuation
-      const messages: OpenAI.ChatCompletionMessageParam[] = [];
-      if (systemPrompt) {
-        messages.push({ role: 'system', content: systemPrompt });
-      }
-      if (askInput.on?.episode) {
-        for (const exchange of askInput.on.episode.exchanges) {
-          messages.push({ role: 'user', content: exchange.input });
-          messages.push({ role: 'assistant', content: exchange.output });
-        }
-      }
-
-      // handle prompt: string or BrainPlugToolExecution[]
-      const promptIsToolExecutions = Array.isArray(askInput.prompt);
-      if (promptIsToolExecutions) {
-        // tool continuation: add assistant message with tool_calls, then tool messages
-        const executions = askInput.prompt as BrainPlugToolExecution[];
-
-        // reconstruct assistant message with tool_calls from prior exchange
-        // note: this is needed because fireworks ai expects the assistant message before tool messages
-        const toolCalls: OpenAI.ChatCompletionMessageToolCall[] =
-          executions.map((exec) => ({
-            id: exec.exid,
-            type: 'function' as const,
-            function: {
-              name: exec.slug,
-              arguments: JSON.stringify(exec.input),
+      // name the model: a tier reads its newest model, an unlisted id is
+      // checked against the catalog; either is refused before any spend
+      const model = target.tier
+        ? await getOneTierModel(
+            { tier: target.tier, apiKey: creds.OPENROUTER_API_KEY },
+            { sdkOpenRouterEndpoints },
+          )
+        : await getOneCatalogModel(
+            {
+              model:
+                target.model ??
+                UnexpectedCodePathError.throw('target names no model', {
+                  target,
+                }),
+              filterSuffix: target.filterSuffix,
+              apiKey: creds.OPENROUTER_API_KEY,
             },
-          }));
+            { sdkOpenRouterEndpoints },
+          );
 
-        messages.push({
-          role: 'assistant',
-          content: null,
-          tool_calls: toolCalls,
-        });
+      // the messages: system prompt, prior exchanges, then this turn
+      const messages = asOpenRouterMessages({
+        systemPrompt: systemPrompt ?? null,
+        exchanges: askInput.on?.episode?.exchanges ?? [],
+        prompt: askInput.prompt,
+      });
+      const promptIsToolExecutions = Array.isArray(askInput.prompt);
+      const promptText = asPromptText({ prompt: askInput.prompt });
 
-        // add tool result messages
-        const toolMessages = castIntoFireworksToolMessages({ executions });
-        messages.push(...toolMessages);
-      } else {
-        // regular prompt
-        messages.push({ role: 'user', content: askInput.prompt as string });
-      }
-
-      // convert zod schema to json schema for structured output
+      // convert zod schema to json schema; a string-like schema wants plain text
       const jsonSchema = z.toJSONSchema(askInput.schema.output);
+      const isStringLike = isStringLikeJsonSchema({ jsonSchema });
 
-      // convert tools to fireworks ai format if plugged
+      // convert tools to openrouter format if plugged; a name maps back to its slug
+      const slugByName = asToolSlugByName({
+        tools: askInput.plugs?.tools ?? [],
+      });
       const tools = askInput.plugs?.tools?.map((tool) =>
-        castIntoFireworksToolDef({ tool }),
+        asOpenRouterToolDef({ tool }),
       );
 
       // determine if tools are present and whether this is a continuation
@@ -193,118 +195,107 @@ export const genBrainAtom = (input: {
 
       // fail-fast: tools + structured output schema not supported by most models
       // vllm constraint: "model must not generate both text and tool calls in same generation"
-      // when tools are plugged, output schema must be z.string() to allow plain text responses
-      if (hasTools && !isToolContinuation) {
+      // when tools are plugged, output schema must be string-like to allow plain text responses
+      if (hasTools && !isToolContinuation && !isStringLike) {
         const schemaType = jsonSchema.type;
-        if (schemaType !== 'string') {
-          throw new BadRequestError(
-            `when tools are plugged, output schema must be z.string() (found: ${schemaType}). most open-source models support either tool_calls or structured json, but not both. use z.string() and parse the response yourself if structure is needed.`,
-            { schemaType, tools: askInput.plugs?.tools?.map((t) => t.slug) },
-          );
-        }
+        throw new ConstraintError(
+          `when tools are plugged, output schema must be z.string() (found: ${schemaType}). most open-source models support either tool_calls or structured json, but not both. use z.string() and parse the response yourself if structure is needed.`,
+          { schemaType, tools: askInput.plugs?.tools?.map((t) => t.slug) },
+        );
       }
 
-      // include response_format only when we want structured output
-      // fireworks ai constraint: "cannot specify response format and function call at the same time"
-      // so we must omit response_format entirely when tools are present (initial OR continuation)
-      const wantStructuredOutput = !hasTools;
-
-      // pin which replica serves this prefix, so the prompt cache can hit
-      // .note = messages are composed static-first: the system prompt (stable
-      //         per role) leads, prior exchanges follow, and the variable
-      //         prompt lands last. that order is what makes the prefix worth a
-      //         pin — a variable value ahead of the briefs would void every
-      //         token behind it.
-      const affinityKey = getOnePromptCacheAffinityKey({
-        model: config.model,
-        systemPrompt,
-      });
+      // name what the ask needs of its endpoint: json, tools, or neither
+      const { structuredOutput: wantStructuredOutput, paramsRequired } =
+        asAskNeeds({ hasTools: !!hasTools, isStringLike });
 
       // .note = the catch NEVER swallows (`rule.forbid.failhide`). it recognizes
-      //         exactly one case — a model withdrawn under an ambiguous
-      //         retirement — and upgrades fireworks' opaque `404 Model not
-      //         found` into an error that names the successors to choose from.
+      //         two cases and names the fix for each: an account fault (402 no
+      //         credits, 401 bad key), and a model openrouter has withdrawn (a
+      //         refusal, confirmed by the catalog; names the nearest live ids).
       //         every other error rethrows untouched.
-      const response = await (async () => {
+      const { response, supply, costUsd } = await (async () => {
         try {
-          return await openai.chat.completions.create(
+          return await getOneSuppliedCompletion(
             {
-              model: config.model,
-              messages,
-              ...(hasTools ? { tools, tool_choice: 'auto' as const } : {}),
-              ...(wantStructuredOutput
-                ? {
-                    response_format: {
-                      type: 'json_schema',
-                      json_schema: {
-                        name: 'response',
-                        strict: true,
-                        schema: jsonSchema,
+              apiKey: creds.OPENROUTER_API_KEY,
+              model,
+              filters: target.filters,
+              paramsRequired,
+              expectsJson: wantStructuredOutput,
+              request: {
+                model,
+                messages,
+                ...(hasTools ? { tools, tool_choice: 'auto' as const } : {}),
+                ...(wantStructuredOutput
+                  ? {
+                      response_format: {
+                        type: 'json_schema',
+                        json_schema: {
+                          name: 'response',
+                          strict: true,
+                          schema: jsonSchema,
+                        },
                       },
-                    },
-                  }
-                : {}),
+                    }
+                  : {}),
+              },
             },
-            {
-              headers: affinityKey
-                ? { 'x-session-affinity': affinityKey }
-                : undefined,
-            },
+            { openai, sdkOpenRouterEndpoints },
           );
         } catch (error) {
-          if (!(error instanceof Error)) throw error;
-          throw getOneRetirementError({ slug, error }) ?? error;
+          // name the cause where it is known; else rethrow as it came
+          throw await getOneAskErrorNamed(
+            {
+              error,
+              model,
+              filterSuffix: target.filterSuffix,
+              apiKey: creds.OPENROUTER_API_KEY,
+            },
+            { sdkOpenRouterEndpoints },
+          );
         }
       })();
 
       // extract response message
-      const message = response.choices[0]?.message;
+      const message = asReplyChoice({ response })?.message;
       const content = message?.content ?? '';
       const toolCalls = message?.tool_calls;
 
       // calculate elapsed time
       const elapsedMs = Date.now() - startedAt;
 
-      // read the token counts, disjoint, so each token is billed exactly once
-      const sizeTokens = asBrainSizeTokens({ usage: response.usage });
-
-      // calculate character counts
-      const promptLength = promptIsToolExecutions
-        ? JSON.stringify(askInput.prompt).length
-        : (askInput.prompt as string).length;
-      const charsInput = (systemPrompt?.length ?? 0) + promptLength;
-      const charsOutput = content.length;
-
-      // define size for metrics and cost calculation
-      const size = {
-        tokens: sizeTokens,
-        chars: {
-          input: charsInput,
-          output: charsOutput,
-          cache: { get: 0, set: 0 },
-        },
-      };
-
-      // calculate cash costs via rhachet utility
-      const { cash } = calcBrainOutputCost({
-        for: { tokens: size.tokens },
-        with: { cost: { cash: config.spec.cost.cash } },
+      // the size of this ask: tokens as billed, disjoint; chars in and out
+      const size = asBrainSizeForAsk({
+        usage: response.usage,
+        systemPrompt: systemPrompt ?? null,
+        promptText,
+        content,
       });
 
-      // build metrics
+      // estimate the breakdown from the spec rate; the total is openrouter's charge
+      const { cash: cashEstimate } = calcBrainOutputCost({
+        for: { tokens: size.tokens },
+        with: { cost: { cash: target.spec.cost.cash } },
+      });
+      const cash = asCashWithSupplyTotal({
+        estimate: cashEstimate,
+        costUsd,
+      });
+
+      // build metrics: rhachet's declared measures only
+      // .note = the supply report rides as `output.supply`, beside rhachet's
+      //         declared fields, until rhachet declares a typed slot for it
       const metrics = new BrainOutputMetrics({
         size,
-        cost: {
-          time: { milliseconds: elapsedMs },
-          cash,
-        },
+        cost: { time: { milliseconds: elapsedMs }, cash },
       });
 
       // handle tool calls if present
       if (toolCalls && toolCalls.length > 0) {
         // brain requested tool invocations
         const invocations: BrainPlugToolInvocation[] = toolCalls.map(
-          (toolCall) => castFromFireworksToolCall({ toolCall }),
+          (toolCall) =>
+            asBrainPlugToolInvocationFromOpenRouter({ toolCall, slugByName }),
         );
 
         // build continuables for tool call exchange
@@ -313,9 +304,7 @@ export const genBrainAtom = (input: {
           on: { episode: askInput.on?.episode ?? null, series: null },
           with: {
             exchange: {
-              input: promptIsToolExecutions
-                ? JSON.stringify(askInput.prompt)
-                : (askInput.prompt as string),
+              input: promptText,
               output: JSON.stringify(toolCalls),
               exid: response.id ?? null,
             },
@@ -328,13 +317,14 @@ export const genBrainAtom = (input: {
           output: null,
           calls: { tools: invocations },
           metrics,
+          supply,
           episode,
           series,
         } as unknown as BrainOutput<TOutput, 'atom', TPlugs>);
       }
 
       // parse response content based on schema type
-      const output = castContentToOutputSchema({
+      const output = asOutputFromContent({
         content,
         schema: askInput.schema.output,
       });
@@ -345,9 +335,7 @@ export const genBrainAtom = (input: {
         on: { episode: askInput.on?.episode ?? null, series: null },
         with: {
           exchange: {
-            input: promptIsToolExecutions
-              ? JSON.stringify(askInput.prompt)
-              : (askInput.prompt as string),
+            input: promptText,
             output: content,
             exid: response.id ?? null,
           },
@@ -360,6 +348,7 @@ export const genBrainAtom = (input: {
         output,
         calls: null,
         metrics,
+        supply,
         episode,
         series,
       } as unknown as BrainOutput<TOutput, 'atom', TPlugs>);

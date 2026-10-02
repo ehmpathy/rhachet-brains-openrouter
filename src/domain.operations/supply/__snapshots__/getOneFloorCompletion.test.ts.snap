@@ -1,0 +1,30 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`getOneFloorCompletion given: [case4] every qualified endpoint throttles, refuses, or fails when: [t0] the walk runs then: the message matches snapshot 1`] = `
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed mid-reply, or answered prose where json was owed. no answer was returned.
+
+  throttled cheap
+  refused   mid
+  failed    dear
+
+fix: retry after 7s (openrouter's retry-after), or loosen a promise so more endpoints qualify.
+
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "attempts": [
+    {
+      "tag": "cheap",
+      "outcome": "throttled"
+    },
+    {
+      "tag": "mid",
+      "outcome": "refused"
+    },
+    {
+      "tag": "dear",
+      "outcome": "failed"
+    }
+  ],
+  "retryAfter": "7"
+}"
+`;

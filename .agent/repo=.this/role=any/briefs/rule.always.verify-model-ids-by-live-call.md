@@ -2,16 +2,16 @@
 
 ## .what
 
-whenever you touch this repo's model catalog — add an id, re-pin an id, refresh the rates,
-or merely pass through `BrainAtom.config.ts` — **prove every configured id with a live chat
-completion.** run it, read the verdict, record the date.
+whenever you touch this repo's static catalog — add an id, re-pin an id, re-aim a generic,
+refresh rates, or merely pass through `BrainAtom.config.ts` — **prove every configured id with a
+live chat completion.** run it, read the verdict, record the date.
 
 ```
-👎  GET /models returns it          → NOT evidence
+👎  GET /models lists it            → NOT evidence
 👍  POST /chat/completions answers  → evidence
 ```
 
-the check is already mechanized. run it:
+the check is mechanized:
 
 ```sh
 rhx keyrack unlock --owner ehmpath --env test
@@ -19,44 +19,27 @@ rhx git.repo.test --what integration --scope BrainAtom.config --mode apply
 ```
 
 `BrainAtom.config.integration.test.ts` probes **every** id in `CONFIG_BY_ATOM_SLUG` with a
-one-token completion and fails the suite on the first that 404s.
+one-token completion and fails on the first that does not answer.
 
-## .why — the catalog LISTS; it does not SERVE
+## .why — a catalog LISTS; it does not SERVE
 
-`rule.require.pin-explicit-model-ids` prescribes a catalog read and calls the api
-"authoritative over any catalog or docs page." that is true against a **vendor page**, and
-**insufficient against the api itself**.
+a model catalog answers *"does the provider know this name?"*, never *"will it run it?"*.
 
-**measured 2026-09-16.** the models api returned all three of these as available. all three
-answered `404 Model not found, inaccessible, and/or not deployed` on inference:
+**measured 2026-09-16, on this package's predecessor provider.** its models api listed three ids
+as available. all three answered `404 Model not found` on inference. one of them had been cited,
+by an earlier version of this very rule, as "listed and latent". it was already dead.
 
-| id | in `/models` | serves |
-|---|---|---|
-| `deepseek-v4-pro` | ✔ listed | ✘ **404** |
-| `qwen3p7-plus` | ✔ listed | ✘ **404** |
-| `minimax-m2p7` | ✔ listed | ✘ **404** |
+openrouter adds a second gap: an id serves only while **some endpoint** hosts it. the endpoint
+list can empty while the catalog still lists the id.
 
-🔴 **the first row is the sharpest.** the prior rule read the catalog, saw `deepseek-v4-pro`
-and `deepseek-v4-pro-0813` both present, and concluded the alias was "served" — it named
-this exact pair as "live and latent." **it was not latent. it was already dead**, and the
-catalog said otherwise.
+## .why — the rot is silent
 
-⇒ so `/models` answers *"does fireworks know this name?"*, never *"will fireworks run it?"*.
-those are different questions, and only the second one is the one we have.
-
-## .why — the rot is silent, and silence is the whole cost
-
-no file in this repo changes when a provider retires a model. so:
+no file in this repo changes when a provider withdraws a model:
 
 - no diff, so no PR gate fires
 - no type error, so no build fails
-- the unit suite stays green, because it never leaves the process
+- the unit suite stays green; it never leaves the process
 - ⇒ **the catalog can rot for a month and report healthy the whole time**
-
-**measured:** main's CI last ran a live pass on 2026-08-15. by 2026-09-16 the catalog
-carried **three dead ids** and one wrong context window (`kimi-k2.6` declared 128K against
-an actual 262,144 — wrong by half, which silently halves a caller's budget). every one of
-those was found by the first live call anyone made in a month.
 
 ## .when it fires
 
@@ -64,58 +47,42 @@ those was found by the first live call anyone made in a month.
 |---|---|
 | you **add** a model id | probe it live before the id lands |
 | you **re-pin** an id to a dated peer | probe **both** — the dated one may be dead too |
+| you **re-aim** a versionless generic | probe the new target |
 | you **refresh rates** or context windows | probe the whole catalog; the visit is the cheap moment |
 | you touch `BrainAtom.config.ts` **at all** | run the probe. it is one command |
 | you read an id from a blog, a model page, or `/models` | 🔴 that is a **candidate**, never a verified id |
-| the probe reports a 404 | diagnose it — see the table below — never re-pin blindly |
+| the probe fails | diagnose it — see below — never re-pin blindly |
 | you would trust a green unit suite | 🔴 the unit suite cannot see the provider |
 
-## .the diagnosis — a 404 has three causes and three different fixes
+## .the diagnosis — a failure has three causes and three fixes
 
 | symptom | cause | fix |
 |---|---|---|
-| id 404s, a **dated peer serves** | alias rot | re-pin to the dated id; keep the slug |
-| id 404s, **no peer serves** | deprecated / withdrawn | **drop the slug.** a re-pin cannot fix a deprecation |
-| id serves, **output shifted** | weight drift under an alias | re-pin to the dated id |
-
-⚠️ the middle row breaks this package's slug union. that is correct and unavoidable — a slug
-that names a dead model is worse than an absent one, because a caller finds out in
-production rather than at compile time.
+| id 404s, a dated peer serves | alias rot | re-pin to the dated id; keep the slug |
+| id 404s, no peer serves | withdrawn — the catalog dates or drops it | re-aim every tier that names it; the pin stays and fails named. a re-pin cannot fix a withdrawal |
+| id serves, output shifted | weight drift under an alias | re-pin to the dated id |
 
 ## .what to record
 
-a probe you do not write down is a probe the next reader must re-run. every id carries:
-
 - the **date** its live call was verified, in the config comment
-- the **context window** as the models api reports it — exact, never a rounded vendor figure
-  (`1_048_576`, not "1M")
-- for a dropped slug, a `.note` on the union that names the id and the evidence
+- the **context window** exactly as the catalog reports `context_length` (`1_048_576`, not "1M")
 
 ## .the bound
 
-this rule governs **serve-ability**, which only a live call settles. it does not replace
-`rule.require.pin-explicit-model-ids` — that one governs **which form** of an id to take,
-and it still holds in full. take the dated id, *and* prove it answers.
+this rule governs **serve-ability** of the **static** catalog. an unlisted id is checked against
+the live catalog at ask time and needs no probe here. `rule.require.pin-explicit-model-ids`
+governs **which form** of an id to take.
 
 ## .enforcement
 
 - a model id added or re-pinned with no live call on record = **blocker**
-- a catalog read (`/models`, a model page, a blog) cited as proof an id serves = **blocker**
-- a touch of `BrainAtom.config.ts` that ships without a live catalog probe = **blocker**
-- a deprecated model "fixed" by a re-pin rather than a drop = **blocker**
-- a context window taken from a vendor page where the api reports an exact figure = **nitpick**
+- a catalog read cited as proof an id serves = **blocker**
+- a touch of `BrainAtom.config.ts` that ships without the live probe = **blocker**
+- a withdrawn model "fixed" by a re-pin rather than a tier re-aim = **blocker**
+- a context window rounded where the catalog reports an exact figure = **nitpick**
 
 ## .see also
 
-- `rule.require.pin-explicit-model-ids` — the WHICH-FORM rule this completes.
-  🔴 its `.how` step 1 and its "live and latent" evidence paragraph are **corrected here**:
-  a catalog read is necessary and not sufficient, and the `deepseek-v4-pro` alias it cited
-  as served was already dead.
+- `rule.require.pin-explicit-model-ids` — the which-form rule this completes
 - `define.brain-config-pattern` — where model ids are declared
 - `BrainAtom.config.integration.test.ts` — the mechanized probe
-
-## .sources
-
-- live probe of every catalog id, 2026-09-16 (this repo)
-- [Fireworks — Models overview (deprecation notice period)](https://docs.fireworks.ai/models/overview)
-- [Fireworks — serverless rates](https://docs.fireworks.ai/serverless/rates)

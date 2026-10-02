@@ -1,0 +1,103 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`getAllQualifiedEndpoints a json-memory step that empties the set names the z.string() fix 1`] = `
+"✋ ConstraintError: no endpoint of deepseek/deepseek-v4.1-flash keeps every promise. no call was sent.
+
+    1 ← all endpoints
+    1 ← supports(response_format)
+    0 ← honors(json) — not seen in prose, 7d
+    0 ← speed>=50tps
+
+each endpoint, cheapest input rate first, and the promise it fails:
+  $0.2/M     dekallm                      ✗ honors(json) — not seen in prose, 7d
+
+fix: every json-capable endpoint answered prose on this machine within 7 days. ask for a z.string() reply, or choose another model
+
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "filters": {
+    "floor": true,
+    "speedMinTps": 50,
+    "region": null,
+    "precision": null,
+    "privacy": null,
+    "priceMaxUsdPerMillion": null
+  }
+}"
+`;
+
+exports[`getAllQualifiedEndpoints a refusal names each endpoint, its input rate, and the promise it fails (case=4) 1`] = `
+"✋ ConstraintError: no endpoint of deepseek/deepseek-v4.1-flash keeps every promise. no call was sent.
+
+    3 ← all endpoints
+    0 ← speed>=500tps
+
+each endpoint, cheapest input rate first, and the promise it fails:
+  $0.01/M    crawl                        ✗ speed>=500tps
+  $0.03/M    relace                       ✗ speed>=500tps
+  $0.2/M     dekallm                      ✗ speed>=500tps
+
+fix: drop or loosen the promise where the count reaches 0
+
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "filters": {
+    "floor": true,
+    "speedMinTps": 500,
+    "region": null,
+    "precision": null,
+    "privacy": null,
+    "priceMaxUsdPerMillion": null
+  }
+}"
+`;
+
+exports[`getAllQualifiedEndpoints a schema step that empties the set names the z.string() fix 1`] = `
+"✋ ConstraintError: no endpoint of deepseek/deepseek-v4.1-flash keeps every promise. no call was sent.
+
+    1 ← all endpoints
+    0 ← supports(response_format)
+    0 ← speed>=50tps
+
+each endpoint, cheapest input rate first, and the promise it fails:
+  $0.03/M    relace                       ✗ supports(response_format)
+
+fix: no endpoint honors a json schema. ask for a z.string() reply, or choose another model
+
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "filters": {
+    "floor": true,
+    "speedMinTps": 50,
+    "region": null,
+    "precision": null,
+    "privacy": null,
+    "priceMaxUsdPerMillion": null
+  }
+}"
+`;
+
+exports[`getAllQualifiedEndpoints a tools step that empties the set names the drop-the-param fix 1`] = `
+"✋ ConstraintError: no endpoint of deepseek/deepseek-v4.1-flash keeps every promise. no call was sent.
+
+    1 ← all endpoints
+    0 ← supports(tools)
+    0 ← speed>=50tps
+
+each endpoint, cheapest input rate first, and the promise it fails:
+  $0.1/M     toolless                     ✗ supports(tools)
+
+fix: no endpoint supports(tools). drop that param from the ask, or choose another model
+
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "filters": {
+    "floor": true,
+    "speedMinTps": 50,
+    "region": null,
+    "precision": null,
+    "privacy": null,
+    "priceMaxUsdPerMillion": null
+  }
+}"
+`;

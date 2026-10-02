@@ -4,7 +4,7 @@ import { asBrainSizeTokens } from './asBrainSizeTokens';
 
 describe('asBrainSizeTokens', () => {
   given('[case1] a usage with cached tokens', () => {
-    // .why = this is the case the cost model turns on. fireworks reports
+    // .why = this is the case the cost model turns on. openrouter reports
     //        `prompt_tokens` as the TOTAL with `cached_tokens` a SUBSET, while
     //        rhachet sums input + cache.get as disjoint addends.
     const usage = {
@@ -93,8 +93,8 @@ describe('asBrainSizeTokens', () => {
   given('[case5] any usage at all', () => {
     when('[t0] cast', () => {
       then('cache.set is always zero', () => {
-        // .why = fireworks publishes no cache-write rate and returns no write
-        //        count, so there is no write to bill.
+        // .why = no model in this catalog bills a cache write, so the cast
+        //        never reports one. the real charge is `usage.cost`.
         expect(
           asBrainSizeTokens({
             usage: {

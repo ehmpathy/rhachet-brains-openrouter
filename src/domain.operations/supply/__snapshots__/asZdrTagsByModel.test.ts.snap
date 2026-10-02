@@ -1,0 +1,37 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`asZdrTagsByModel a body whose \`data\` is not an array fails loud, and names the read 1`] = `
+"💥 MalfunctionError: openrouter's /endpoints/zdr reply drifted from the shape this package reads. no promise could be checked, so no call was sent.
+
+{
+  "read": "/endpoints/zdr",
+  "issues": [
+    "data: Invalid input: expected array, received object"
+  ],
+  "hint": "openrouter changed its api; update the schema in this package"
+}"
+`;
+
+exports[`asZdrTagsByModel a body with no \`data\` fails loud, and names the read 1`] = `
+"💥 MalfunctionError: openrouter's /endpoints/zdr reply drifted from the shape this package reads. no promise could be checked, so no call was sent.
+
+{
+  "read": "/endpoints/zdr",
+  "issues": [
+    "data: Invalid input: expected array, received undefined"
+  ],
+  "hint": "openrouter changed its api; update the schema in this package"
+}"
+`;
+
+exports[`asZdrTagsByModel a null body fails loud, and names the read 1`] = `
+"💥 MalfunctionError: openrouter's /endpoints/zdr reply drifted from the shape this package reads. no promise could be checked, so no call was sent.
+
+{
+  "read": "/endpoints/zdr",
+  "issues": [
+    "(root): Invalid input: expected object, received null"
+  ],
+  "hint": "openrouter changed its api; update the schema in this package"
+}"
+`;
