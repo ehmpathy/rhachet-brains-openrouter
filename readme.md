@@ -93,7 +93,7 @@ import { z } from 'zod';
 
 const { brain } = await genContextBrain({
   choice: { atom: 'openrouter/deepseek/flash' },
-  creds: async () => ({ OPENROUTER_API_KEY: await vault.get('openrouter') }),
+  creds: { keyrack: { owner: 'ehmpath', env: 'prod' } },
 });
 
 const { output, metrics } = await brain.choice.ask({
@@ -115,7 +115,7 @@ import { getBrainAtomsByOpenRouter } from 'rhachet-brains-openrouter';
 const { brain } = genContextBrain({
   brains: { atoms: getBrainAtomsByOpenRouter() },
   choice: { atom: 'openrouter/deepseek/flash' },
-  creds: async () => ({ OPENROUTER_API_KEY: await vault.get('openrouter') }),
+  creds: { keyrack: { owner: 'ehmpath', env: 'prod' } },
 });
 ```
 
