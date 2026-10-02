@@ -1,0 +1,59 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`getOneFloorExhaustedError a walk with a throttle names the wait openrouter asked for 1`] = `
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed mid-reply, or answered prose where json was owed. no answer was returned.
+
+  throttled cheap/fp8
+  refused   mid/fp8
+  failed    dear/bf16
+
+fix: retry after 7s (openrouter's retry-after), or loosen a promise so more endpoints qualify.
+
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "attempts": [
+    {
+      "tag": "cheap/fp8",
+      "outcome": "throttled"
+    },
+    {
+      "tag": "mid/fp8",
+      "outcome": "refused"
+    },
+    {
+      "tag": "dear/bf16",
+      "outcome": "failed"
+    }
+  ],
+  "retryAfter": "7"
+}"
+`;
+
+exports[`getOneFloorExhaustedError a walk with no throttle says to retry later 1`] = `
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed mid-reply, or answered prose where json was owed. no answer was returned.
+
+  throttled cheap/fp8
+  refused   mid/fp8
+  failed    dear/bf16
+
+fix: retry later, or loosen a promise so more endpoints qualify.
+
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "attempts": [
+    {
+      "tag": "cheap/fp8",
+      "outcome": "throttled"
+    },
+    {
+      "tag": "mid/fp8",
+      "outcome": "refused"
+    },
+    {
+      "tag": "dear/bf16",
+      "outcome": "failed"
+    }
+  ],
+  "retryAfter": null
+}"
+`;

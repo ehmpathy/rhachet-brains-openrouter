@@ -1,0 +1,31 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`getOneServedEndpoint an answer from another provider is withheld, loud 1`] = `
+"💥 MalfunctionError: openrouter served from 'AtlasCloud', yet the ask admitted only 'deepinfra/us'. the answer is withheld.
+
+fix: retry the ask. openrouter served outside the admitted set, so report the generation below to openrouter if it recurs
+audit: https://openrouter.ai/activity — generation gen-1
+
+{
+  "provider": "AtlasCloud",
+  "admitted": [
+    "deepinfra/us"
+  ],
+  "generationId": "gen-1"
+}"
+`;
+
+exports[`getOneServedEndpoint an answer that names no provider is withheld, and never called a breach 1`] = `
+"💥 MalfunctionError: openrouter's reply named no provider, so it cannot be proven among admitted 'deepinfra/us'. the answer is withheld.
+
+fix: retry the ask. if it recurs, openrouter has changed its reply shape
+audit: https://openrouter.ai/activity — generation gen-1
+
+{
+  "provider": null,
+  "admitted": [
+    "deepinfra/us"
+  ],
+  "generationId": "gen-1"
+}"
+`;

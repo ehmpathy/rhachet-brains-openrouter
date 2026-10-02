@@ -1,298 +1,326 @@
-# rhachet-brains-fireworksai
+# rhachet-brains-openrouter
 
-rhachet brain.atom adapter for fireworks ai open-source models
+rhachet brain.atom adapter for [openrouter](https://openrouter.ai) — any model openrouter serves,
+with supply filters written in the slug.
+
+```ts
+genBrainAtom({ slug: 'openrouter/deepseek/flash/floor&speed=min50tps&privacy=full' });
+//                    └ which model ────────┘ └ which hosts may serve it ────────┘
+```
+
+openrouter serves each model from many hosts, at many prices. the slug names the model, and its
+filters say which hosts may serve it. the atom sends each ask only to hosts that keep every filter,
+and refuses an answer from any other host.
 
 ## install
 
 ```sh
-npm install rhachet-brains-fireworksai
+npm install rhachet-brains-openrouter
+```
+
+## setup — account to first call
+
+### 1. make an account
+
+sign up at https://openrouter.ai.
+
+### 2. provision the wallet
+
+add credits at https://openrouter.ai/settings/credits — $10 covers a long trial. leave auto
+top-up **off**: then a runaway loop stops at the balance, never at your card's limit.
+
+### 3. mint a key
+
+at https://openrouter.ai/settings/keys, mint a key per use — say `rhachet-dev` for your machine,
+`rhachet-ci` for ci. scope each one:
+
+- **credit limit** — e.g. $5. a key with no limit can spend the whole balance
+- **limit reset** — e.g. weekly, so the limit bounds a week, not the key's whole life
+
+openrouter shows the key **once**. copy it now.
+
+### 4. store it in keyrack
+
+declare the key in your repo's `.agent/keyrack.yml`, under the env that will use it:
+
+```yaml
+env.prod:
+  - OPENROUTER_API_KEY
+```
+
+then fill it. keyrack prompts for the value, so it never lands in a file or your shell history:
+
+```sh
+rhx keyrack fill --owner ehmpath --env prod --key OPENROUTER_API_KEY
+```
+
+### 5. confirm it works — one command
+
+```sh
+rhx keyrack unlock --owner ehmpath --env prod
+```
+
+```sh
+node -e "
+const { genContextBrainSupplier } = require('rhachet');
+const { genBrainAtom } = require('rhachet-brains-openrouter');
+const { z } = require('zod');
+const context = genContextBrainSupplier('openrouter', { creds: { keyrack: { owner: 'ehmpath', env: 'prod' } } });
+genBrainAtom({ slug: 'openrouter/deepseek/flash' })
+  .ask({ role: { briefs: [] }, prompt: 'reply with the word ok', schema: { output: z.string() } }, context)
+  .then(({ output, metrics }) => console.log('✔ openrouter answered', { output, cost: metrics.cost.cash.total }));
+"
+```
+
+it prints the answer and what openrouter billed — a fraction of a cent:
+
+```
+✔ openrouter answered { output: 'ok', cost: 'USD 0.000004' }
 ```
 
 ## usage
 
+three ways in, most preferred first.
+
+### 1. context discovery — preferred
+
+rhachet discovers this package on its own: it scans your `package.json` for `rhachet-brains-*`
+dependencies and registers every atom each one exports. name the brain, and ask:
+
 ```ts
-import { genBrainAtom } from 'rhachet-brains-fireworksai';
+import { genContextBrain } from 'rhachet';
 import { z } from 'zod';
 
-// create a brain atom for direct model inference
-const brainAtom = genBrainAtom({ slug: 'fireworks/deepseek/flash/latest' });
+const { brain } = await genContextBrain({
+  choice: { atom: 'openrouter/deepseek/flash' },
+  creds: async () => ({ OPENROUTER_API_KEY: await vault.get('openrouter') }),
+});
 
-// simple string output
-const { output: explanation } = await brainAtom.ask({
+const { output, metrics } = await brain.choice.ask({
   role: { briefs: [] },
   prompt: 'explain this code',
   schema: { output: z.string() },
 });
+```
 
-// structured object output
-const { output: { summary, issues } } = await brainAtom.ask({
-  role: { briefs: [] },
-  prompt: 'analyze this code',
-  schema: { output: z.object({ summary: z.string(), issues: z.array(z.string()) }) },
+### 2. context specification
+
+to hold the brain list in code — say, a sandbox with no `package.json` — register the atoms
+yourself. the choice and the ask are the same as above:
+
+```ts
+import { genContextBrain } from 'rhachet';
+import { getBrainAtomsByOpenRouter } from 'rhachet-brains-openrouter';
+
+const { brain } = genContextBrain({
+  brains: { atoms: getBrainAtomsByOpenRouter() },
+  choice: { atom: 'openrouter/deepseek/flash' },
+  creds: async () => ({ OPENROUTER_API_KEY: await vault.get('openrouter') }),
 });
 ```
 
-## available brains
+### 3. direct access
 
-slug shape: `fireworks/{family}/{tier}/{version|latest}`.
-
-### versionless slugs — the recommended way to name a model
-
-a provider retires model versions on its own clock. name a **versionless** slug and that
-churn costs you naught: we re-aim it here, and your code never changes.
-
-| slug | names today | tier |
-| --- | --- | --- |
-| `fireworks/deepseek/flash/latest` | DeepSeek-V4.1-Flash | cheapfast |
-| `fireworks/deepseek/pro/latest` | DeepSeek-V4.1-Flash ⚠️ | see below |
-| `fireworks/glm/flash/latest` | GLM-5.3-Flash | cheapfast |
-| `fireworks/glm/pro/latest` | GLM-5.3 | frontier |
-| `fireworks/kimi/pro/latest` | Kimi-K3 | frontier |
-| `fireworks/minimax/flash/latest` | MiniMax-M3 | cheapfast |
-| `fireworks/gpt-oss/flash/latest` | GPT-OSS-120B | cheapfast |
-| `fireworks/nemotron/flash/latest` | Nemotron-3.5-Lightning | cheapfast |
-
-**the tier is part of the name on purpose** — a bare `{family}/latest` would let a cheapfast
-caller drift onto a frontier model at 6x the input rate with no signal. version is the axis
-you do not care about; tier is the one you chose.
-
-> **pin instead when you need byte-stable weights** — an eval, a snapshot suite, a
-> reproducibility guarantee. every version-pinned slug below stays supported, forever. the
-> versionless slug is a convenience, never a replacement.
-
-#### ⚠️ one cross-tier exception: `fireworks/deepseek/pro/latest`
-
-deepseek's pro tier is discontinued. fireworks named **V4.1-Flash** as V4-Pro's successor, so
-the pro generic points at a **cheapfast** model — `$1.32` → `$0.22` input, swe-bench 80.6% →
-unpublished. both deepseek generics name the same model while this stands.
-
-if you need frontier capacity from deepseek, there is none today; reach for
-`fireworks/kimi/pro/latest` or `fireworks/glm/pro/latest` instead. when deepseek ships a real
-pro-tier model, this generic re-aims onto it and you change naught.
-
-> note this is **not** the same call as the pinned `fireworks/deepseek/pro/v4`, which still
-> refuses to route. when you name the exact model you chose that capacity, so we will not
-> swap it under you. when you name the generic you asked us to choose. that delegation is the
-> only difference, and it is the reason one routes and the other does not.
-
-#### no generic for `fireworks/kimi/code`
-
-kimi's code tier holds one model, and it is retired with two candidate successors that
-fireworks did not choose between. a generic that named it would be a scheduled break under a
-safe name, so the tier carries a pin and no generic.
-
-### atoms (via genBrainAtom)
-
-stateless inference with tool use support. **every model below answered a live chat completion
-on 2026-09-22** — a catalog entry is not evidence that a model serves, so each id is probed
-rather than assumed.
-
-rates are the **standard** tier, per 1M tokens. `cached input` is what a prompt-cache hit costs
-— see [prompt cache](#prompt-cache) for how to earn one.
-
-#### pro tier — frontier
-
-highest capability models for complex tasks.
-
-| slug | model | context | vision | swe-bench | input | cached input | output |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `fireworks/kimi/pro/k3` | Kimi-K3 | 1M | ✔ | — | $3.00 | $0.30 | $15.00 |
-| `fireworks/deepseek/pro/v4` | DeepSeek-V4-Pro | 1M | — | 80.6% | $1.32 | $0.044 | $3.96 |
-| `fireworks/kimi/pro/k2.6` | Kimi-K2.6 | 256K | ✔ | 80.2% | $0.95 | $0.16 | $4.00 |
-| `fireworks/glm/pro/5.2` | GLM-5.2 | 1M | — | 77.8% | $1.40 | $0.14 | $4.40 |
-| `fireworks/glm/pro/5.3` | GLM-5.3 | 1M | — | — | $1.40 | $0.26 | $4.40 |
-
-#### flash tier — cheapfast
-
-models optimized for high-volume inference at low cost.
-
-| slug | model | context | vision | swe-bench | input | cached input | output |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `fireworks/nemotron/flash/3.5` | Nemotron-3.5-Lightning-30B-A3B | 256K | — | — | $0.05 | $0.01 | $0.20 |
-| `fireworks/gpt-oss/flash/120b` | GPT-OSS-120B | 128K | — | — | $0.15 | $0.015 | $0.60 |
-| `fireworks/glm/flash/5.3` | GLM-5.3-Flash | 1M | ✔ | — | $0.15 | $0.03 | $0.50 |
-| `fireworks/deepseek/flash/v4` | DeepSeek-V4-Flash | 1M | — | 79.0% | $0.22 | $0.007 | $0.66 |
-| `fireworks/deepseek/flash/v4.1` | DeepSeek-V4.1-Flash | 1M | ✔ | — | $0.22 | $0.007 | $0.66 |
-| `fireworks/minimax/flash/m3` | MiniMax-M3 | 500K | — | 80.5% | $0.30 | $0.06 | $1.20 |
-
-#### code tier — code-specialized
-
-| slug | model | context | vision | swe-bench | input | cached input | output |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| `fireworks/kimi/code/k2.7` | Kimi-K2.7-Code | 256K | ✔ | — | $0.95 | $0.19 | $4.00 |
-
-> rates from [fireworks serverless rates](https://docs.fireworks.ai/serverless/rates) (read 2026-09-16).
-> context and vision from the [models api](https://api.fireworks.ai/inference/v1/models) (read 2026-09-16);
-> the table rounds, the spec carries the exact figure (e.g. `1_048_576`, not "1M").
-> swe-bench verified scores from [benchlm](https://benchlm.ai/benchmarks/sweVerified) and fireworks ai model cards.
-> a `—` under swe-bench means fireworks publishes no score; we do not guess one.
-
-#### the pre-tier slug names still work
-
-the tier used to be mashed into the version (`v4.1-flash`) or omitted (`k3`). every one of
-those names is still accepted, as an alias, and reaches the same model it always did:
-
-| you named | it reaches |
-| --- | --- |
-| `fireworks/deepseek/v4-pro` | `fireworks/deepseek/pro/v4` |
-| `fireworks/deepseek/v4.1-flash` | `fireworks/deepseek/flash/v4.1` |
-| `fireworks/deepseek/v4-flash` | `fireworks/deepseek/flash/v4` |
-| `fireworks/kimi/k3` | `fireworks/kimi/pro/k3` |
-| `fireworks/kimi/k2.7-code` | `fireworks/kimi/code/k2.7` |
-| `fireworks/kimi/k2.6` | `fireworks/kimi/pro/k2.6` |
-| `fireworks/glm/5.3` | `fireworks/glm/pro/5.3` |
-| `fireworks/glm/5.3-flash` | `fireworks/glm/flash/5.3` |
-| `fireworks/glm/5.2` | `fireworks/glm/pro/5.2` |
-| `fireworks/minimax/m3` | `fireworks/minimax/flash/m3` |
-| `fireworks/gpt-oss/120b` | `fireworks/gpt-oss/flash/120b` |
-| `fireworks/nemotron/3.5-lightning` | `fireworks/nemotron/flash/3.5` |
-
-> a rename is churn unless the old name survives. these are a contract we already shipped, so
-> each still names what it always did. `asPinnedAtomSlug({ slug })` answers which model any
-> name reaches.
-
-#### retired
-
-fireworks announced retirements for five of the models above. **your code still works** — you
-need no edit today.
-
-two had a single successor, so they are routed for you, silently:
-
-| your slug | now reaches | what changes |
-| --- | --- | --- |
-| `fireworks/deepseek/flash/v4` | `fireworks/deepseek/flash/v4.1` | naught — same rates, same 1M context, and it gains vision |
-| `fireworks/glm/pro/5.2` | `fireworks/glm/pro/5.3` | same input/output rates and context. ⚠️ cached input rises `$0.14` → `$0.26`, so a **cache-heavy** workload costs more |
-
-three had **no single correct successor**, so they are *not* routed. a wrong alias is worse
-than no alias, because it is silent — you would get different answers at a different price
-and never learn why. these serve until fireworks withdraws them, and then fail with an error
-that names your options:
-
-| your slug | why no automatic route | choose from |
-| --- | --- | --- |
-| `fireworks/deepseek/pro/v4` | the only successor fireworks named is a tier drop (frontier → cheapfast, `$1.32` → `$0.22`, swe 80.6% → unpublished), not an equivalent | `fireworks/deepseek/flash/v4.1`, or another frontier model |
-| `fireworks/kimi/pro/k2.6` | fireworks named two, with opposite tradeoffs | `fireworks/kimi/pro/k3` (keeps vision, 3x input rate) or `fireworks/glm/pro/5.3` (closer price, 1M context, no vision) |
-| `fireworks/kimi/code/k2.7` | fireworks named two, and neither is code-specialized | same two |
-
-> to never face this again, move to a versionless slug. that is the whole point of them.
-
-#### removed
-
-these slugs were dropped on 2026-09-16 because their ids answered **404** on a live call:
-
-| slug | id | cause |
-| --- | --- | --- |
-| `fireworks/qwen/3.7-plus` | `qwen3p7-plus` | 404 on inference, though still in the catalog |
-| `fireworks/minimax/2.7` | `minimax-m2p7` | 404 on inference, though still in the catalog |
-| `fireworks/gpt-oss/20b` | `gpt-oss-20b` | 404, and absent from the catalog |
-| `fireworks/glm/5.1` | `glm-5p1` | pay-per-token deprecated 2026-08-07; provisioned throughput only |
-
-> a deprecation is never fixable by a re-pin, so the slug is removed rather than re-aimed.
-
-### prompt cache
-
-fireworks caches a prompt **prefix** on the replica that served it. on serverless, each call is
-handed to an arbitrary replica — so a repeated prefix lands on a replica that never saw it, and
-the cache never hits.
-
-this adapter pins the replica for you. every ask that carries `role.briefs` sends an
-`x-session-affinity` header derived from the composed system prompt, so calls that share a
-prefix are routed together.
+to reach a slug rhachet does not list — any openrouter id, or your own filters — build the atom
+directly:
 
 ```ts
-const brainAtom = genBrainAtom({ slug: 'fireworks/deepseek/flash/latest' });
+import { genContextBrainSupplier } from 'rhachet';
+import { genBrainAtom, type BrainSuppliesOpenRouter } from 'rhachet-brains-openrouter';
+import { z } from 'zod';
 
-// these two asks share their briefs, so they share an affinity key,
-// so the second one reuses the first one's cached prefix
-await brainAtom.ask({ role: { briefs }, prompt: 'first question', schema }, context);
-await brainAtom.ask({ role: { briefs }, prompt: 'second question', schema }, context);
-```
-
-measured on `fireworks/deepseek/flash/v4`, 6 calls per arm, rate over the 5 follow-ups:
-
-| arm | affinity header | hit rate | cached tokens |
-| --- | --- | --- | --- |
-| control (raw openai client) | none | **0/5 (0%)** | 0 |
-| treatment (this adapter) | sent | **5/5 (100%)** | 29,425 |
-
-the test that produced those numbers is committed —
-`genBrainAtom.promptCache.integration.test.ts`. it runs both arms against the live api and
-isolates them with a run-unique nonce at the head of each system prompt, so neither arm can
-warm the other.
-
-what a hit is worth: on `deepseek/flash/v4` a cached token bills at `$0.007` against `$0.22`
-— **~31× cheaper**. the discount varies by model (see the `cached input` column above); it is
-never free, and it is never zero.
-
-what this means for you:
-
-- **briefs earn the cache.** an ask with no briefs has no prefix to share, so no key is sent.
-- **the key is coarse on purpose.** it covers the model and the system prompt only — not the
-  prompt, the episode, or the tool defs. a per-request key would pin each call to its own
-  replica and hit zero percent.
-- **keep briefs byte-stable.** a prompt cache matches a prefix, so one changed byte near the
-  head voids every token behind it. a timestamp, uuid, or cwd inside a brief costs you the
-  whole cache.
-- **the cost model splits the two.** `metrics.size.tokens.input` counts only the **uncached**
-  prompt tokens; the cached ones land in `metrics.size.tokens.cache.get`, priced at the
-  cached-input rate. so each token is billed exactly once.
-
-> source: [fireworks prompt cache guide](https://docs.fireworks.ai/guides/prompt-caching)
-
-### tool use support
-
-all 12 models support tool use via the openai-compatible function call api. tested capabilities:
-
-| capability | status |
-| --- | --- |
-| tool invocation | all models |
-| tool continuation | all models |
-| structured output | all models (without tools) |
-
-## credentials
-
-two patterns for credential injection:
-
-### repo level — keyrack shorthand
-
-auto-discover `FIREWORKS_API_KEY` from keyrack:
-
-```ts
-import { genBrainAtom, genContextBrainSupplier } from 'rhachet-brains-fireworksai';
-
-const context = genContextBrainSupplier('fireworks', {
+const context = genContextBrainSupplier<'openrouter', BrainSuppliesOpenRouter>('openrouter', {
   creds: { keyrack: { owner: 'ehmpath', env: 'prod' } },
 });
 
-const brainAtom = genBrainAtom({ slug: 'fireworks/deepseek/flash/latest' });
-const { output } = await brainAtom.ask({ ... }, context);
+const brainAtom = genBrainAtom({ slug: 'openrouter/z-ai/glm-5.3/region=usa' });
+
+const { output, metrics } = await brainAtom.ask(
+  { role: { briefs: [] }, prompt: 'explain this code', schema: { output: z.string() } },
+  context,
+);
 ```
 
-### user level — explicit getter
+## slugs
 
-per-request credentials from vault, kms, or multi-tenant source:
+```
+openrouter/{author}/{tier}[/{filters}]     a tier     openrouter/deepseek/flash/region=usa
+openrouter/{author}/{model}[/{filters}]    any id     openrouter/z-ai/glm-5.3/privacy=full
+```
+
+a slug with no filters of its own takes the **default filters**: `floor&speed=min50tps&privacy=full`.
+a slug with filters takes its own filters instead, whole — the default does not merge in.
+
+### tiers — the newest model, with no release owed
+
+a tier names an author and a capability, never a version. at ask time the atom reads openrouter's
+catalog, picks the newest model on the tier's line that openrouter has not dated for withdrawal,
+and holds that pick on this machine for 7 days.
+
+| slug | the line it follows | tier |
+| --- | --- | --- |
+| `openrouter/deepseek/pro` | `deepseek/deepseek-v{version}-pro` | frontier |
+| `openrouter/deepseek/flash` | `deepseek/deepseek-v{version}-flash` | cheapfast |
+| `openrouter/moonshotai/pro` | `moonshotai/kimi-k{version}` | frontier |
+| `openrouter/z-ai/pro` | `z-ai/glm-{version}` | frontier |
+| `openrouter/z-ai/flash` | `z-ai/glm-{version}-flash` | cheapfast |
+
+- **a new version ships** → the next pick takes it, within 7 days. no edit, no release
+- **openrouter dates a model for withdrawal** → a held pick of it is dropped at once, and the next
+  newest is picked
+- **the line holds no live model** → `ConstraintError`, before any call
+
+the tier is in the name on purpose. a bare `{author}/latest` would let a cheapfast caller drift onto
+a frontier model at many times the rate, with no signal.
+
+a tier's `spec` (rates, context, speed) is an **estimate for the tier**, not a quote for the model
+it picks — frontier $3 / $15 per 1M, cheapfast $0.30 / $2.00 per 1M. ci checks that each estimate
+sits at or above the cheapest live rate of the model picked today.
+
+### any openrouter id — one exact model
+
+name an openrouter id to hold one exact model, say for an eval or a snapshot suite:
 
 ```ts
-import { genBrainAtom, genContextBrainSupplier } from 'rhachet-brains-fireworksai';
-
-const context = genContextBrainSupplier('fireworks', {
-  creds: async () => ({
-    FIREWORKS_API_KEY: await vault.get(`tenant/${tenantId}/fireworks`),
-  }),
-});
-
-const brainAtom = genBrainAtom({ slug: 'fireworks/deepseek/flash/latest' });
-const { output } = await brainAtom.ask({ ... }, context);
+genBrainAtom({ slug: 'openrouter/deepseek/deepseek-v4.1-flash' });
 ```
 
-### fallback — environment variable
+before any spend, the atom checks the id against openrouter's catalog. a typo is refused with the
+nearest ids, as ready slugs, with your filters kept:
 
-if no context provided, falls back to `FIREWORKS_API_KEY` environment variable.
+```
+✋ ConstraintError: openrouter lists no model 'z-ai/glm-5.3-flahs'. no call was sent.
 
-get your api key at https://api.fireworks.ai/inference/settings/api-keys
+did you mean one of these?
+  - openrouter/z-ai/glm-5.3-flash/floor
+  ...
+see every id: https://openrouter.ai/models
+```
+
+a withdrawn id fails with the date it was withdrawn, and the nearest live ids. every id shares one
+**placeholder** `spec` ($3 / $15 per 1M, 128K context).
+
+### which names rhachet can choose
+
+rhachet matches a `choice` by exact name, so only listed names are choosable through
+`genContextBrain`, by discovery or by list: the five tiers, and
+`openrouter/deepseek/flash/floor&speed=min50tps&privacy=full`. for any other slug, call
+`genBrainAtom({ slug })` directly.
+
+## supply filters — each word is a promise
+
+join words with `&`, in any order, each key once.
+
+| word | the promise | how it holds |
+| --- | --- | --- |
+| `floor` | the cheapest endpoint, by input rate, that keeps every other promise | ranked live; one endpoint per attempt; a throttle, refusal, or bad reply moves on to the next cheapest |
+| `speed=min50tps` · `speed.min=50tps` | only endpoints with a measured p50 ≥ 50 tok/s over the last 30 min | an unmeasured endpoint is excluded |
+| `precision=fp8` | only that quantization (`int4` `int8` `fp4` `fp6` `fp8` `fp16` `bf16` `fp32`) | filtered, plus openrouter's native `quantizations` |
+| `privacy=full` | only endpoints on openrouter's zero-data-retention list | filtered, plus native `zdr: true` and `data_collection: deny` |
+| `region=usa` | only endpoints whose tag carries a usa region (`{provider}/us`, `{provider}/us-east`) | a company's domicile is not its datacenter, so a base tag never qualifies |
+| `price.max=0.5usd/M` | never billed above this rate, for input **and** output alike | native `max_price`, one bound on both rates; no cap without this word |
+
+and always:
+
+- your schema and tools are honored (`require_parameters: true`), so an endpoint that cannot serve
+  them is never chosen
+- a json ask goes only to endpoints that declare `structured_outputs`. a host that answers prose
+  where json was owed is skipped on this machine for 7 days
+
+### what is enforced, and what is attested
+
+- **enforced** — every call names the endpoints it accepts (`only: [...]`, no fallback). the
+  response must name one of them, or no answer is returned
+- **attested** — that a host keeps no data (`privacy`), runs the quantization it declares
+  (`precision`), or sits in the region its tag names (`region`) is the host's own claim, screened
+  by openrouter. no client can observe it
+
+### the charge, and the supply report
+
+`metrics.cost.cash.total` is openrouter's own charge (`usage.cost`). the per-token breakdown beside
+it is an estimate from the `spec`, and may not sum to the total.
+
+each ask also reports how it was supplied, as `output.supply`. rhachet's `BrainOutput` does not
+declare that field yet, so read it through a cast:
+
+```ts
+import type { SupplyReport } from 'rhachet-brains-openrouter';
+
+const result = await brainAtom.ask({ ... }, context);
+const supply = (result as unknown as { supply: SupplyReport }).supply;
+// supply.provider       who served
+// supply.generationId   audit the served endpoint later via GET /generation
+// supply.attempts       each endpoint tried, in order; the last one 'served'
+// supply.choice         how many endpoints survived each filter, and each rate
+```
+
+### refusals — each names its fix
+
+| when | error |
+| --- | --- |
+| a filter word is unknown or malformed | `ConstraintError`, before any call — names the word and the valid set |
+| no endpoint keeps every promise | `ConstraintError`, before any call — the funnel shows which promise emptied it |
+| an id openrouter does not list | `ConstraintError`, before any call — the nearest ids |
+| a tier whose line holds no live model | `ConstraintError`, before any call — names the line |
+| a literal pattern, e.g. `openrouter/*/*` | `ConstraintError` — a pattern is not a model |
+| every qualified endpoint throttles, refuses, or answers badly | `MalfunctionError` — each attempt listed |
+| openrouter has withdrawn the model | `ConstraintError` — the date it was withdrawn, and the nearest live ids |
+| the response names a provider the call did not accept | `MalfunctionError` — the answer is withheld |
+| 402 no credits · 401 bad key | `ConstraintError` — names the credits page or the keyrack fill |
+
+### what the atom remembers, and for how long
+
+each read below is cached on disk under `~/.rhachet/storage/repo=openrouter/role=any/cache/`, and
+shared by every process on the machine:
+
+| read | held for |
+| --- | --- |
+| the model catalog | 60 min |
+| the endpoint list, per model | 30 min — the window of openrouter's throughput stat |
+| the zero-retention list | fresh for 60 min, then served while a refresh runs behind, up to 24h |
+| the model each tier picked | 7 days, or until openrouter dates it for withdrawal |
+| a host that answered prose where json was owed | 7 days |
+
+a stale zero-retention list is safe: each `privacy=full` call also sends `zdr: true`, so openrouter
+refuses an endpoint that left the list. the api key never enters a cache key. the reads cost ~190ms
+cold and naught warm.
+
+## tool use
+
+tools are sent via openrouter's openai-compatible function call api, with invocation and
+continuation. a tool's slug is sent as a function name in `[a-zA-Z0-9_-]`, so `weather.lookup`
+goes as `weather_lookup` and comes back as `weather.lookup`. two slugs that would send under one
+name are refused before any call.
+
+structured output works without tools; with tools plugged, the output schema must be `z.string()`.
+
+## credentials
+
+a context is required; there is no environment fallback. `genContextBrainSupplier` comes from
+`rhachet`.
+
+### keyrack shorthand
+
+```ts
+const context = genContextBrainSupplier('openrouter', {
+  creds: { keyrack: { owner: 'ehmpath', env: 'prod' } },
+});
+```
+
+### explicit getter
+
+per-request credentials from a vault, kms, or multi-tenant source:
+
+```ts
+const context = genContextBrainSupplier('openrouter', {
+  creds: async () => ({
+    OPENROUTER_API_KEY: await vault.get(`tenant/${tenantId}/openrouter`),
+  }),
+});
+```
 
 ## sources
 
-- [fireworks ai api docs](https://docs.fireworks.ai/reference/chat-completions-1)
-- [fireworks ai models](https://docs.fireworks.ai/docs/serverless-models)
-- [fireworks ai rates](https://docs.fireworks.ai/serverless/rates)
+- [openrouter api reference](https://openrouter.ai/docs/api-reference/chat-completion)
+- [openrouter provider route docs](https://openrouter.ai/docs/features/provider-routing)
+- [openrouter models](https://openrouter.ai/models)

@@ -1,0 +1,57 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`asSlugParts a filter segment with a bad word is refused at parse: openrouter/acme/new-model/floor& 1`] = `
+"✋ ConstraintError: invalid openrouter supply filter 'floor&': empty word (stray '&')
+
+valid words, joined by '&' in any order:
+  - floor
+  - speed=min{N}tps · speed.min={N}tps
+  - region=usa
+  - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
+  - privacy=full
+  - price.max={N}usd/M
+
+{
+  "word": "floor&"
+}"
+`;
+
+exports[`asSlugParts a filter segment with a bad word is refused at parse: openrouter/deepseek/flash/fast&speed=min50tps 1`] = `
+"✋ ConstraintError: invalid openrouter supply filter 'fast': unknown word
+
+valid words, joined by '&' in any order:
+  - floor
+  - speed=min{N}tps · speed.min={N}tps
+  - region=usa
+  - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
+  - privacy=full
+  - price.max={N}usd/M
+
+{
+  "word": "fast"
+}"
+`;
+
+exports[`asSlugParts a filter segment with a bad word is refused at parse: openrouter/deepseek/flash/floor&cheap 1`] = `
+"✋ ConstraintError: invalid openrouter supply filter 'cheap': unknown word
+
+valid words, joined by '&' in any order:
+  - floor
+  - speed=min{N}tps · speed.min={N}tps
+  - region=usa
+  - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
+  - privacy=full
+  - price.max={N}usd/M
+
+{
+  "word": "cheap"
+}"
+`;
+
+exports[`asSlugParts a literal pattern is refused: a pattern names no model (case=20) 1`] = `
+"✋ ConstraintError: 'openrouter/*/*/*' is a routed pattern, not a model. fill the shape openrouter/{author}/{model}[/{filters}], e.g. openrouter/deepseek/flash/floor
+
+{
+  "slug": "openrouter/*/*/*"
+}"
+`;

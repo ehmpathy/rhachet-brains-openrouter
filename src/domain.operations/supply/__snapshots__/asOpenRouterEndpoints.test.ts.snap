@@ -1,0 +1,13 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`asOpenRouterEndpoints a drifted body fails loud, and names the read 1`] = `
+"💥 MalfunctionError: openrouter's /models/deepseek/deepseek-v4.1-flash/endpoints reply drifted from the shape this package reads. no promise could be checked, so no call was sent.
+
+{
+  "read": "/models/deepseek/deepseek-v4.1-flash/endpoints",
+  "issues": [
+    "data.endpoints.0.pricing: Invalid input: expected object, received undefined"
+  ],
+  "hint": "openrouter changed its api; update the schema in this package"
+}"
+`;

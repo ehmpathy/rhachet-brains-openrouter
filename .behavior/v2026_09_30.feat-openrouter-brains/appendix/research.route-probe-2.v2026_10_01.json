@@ -1,0 +1,394 @@
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "at": 1790886836973,
+  "key": {
+    "status": 200,
+    "body": {
+      "data": {
+        "label": "sk-or-v1-471...e96",
+        "is_management_key": false,
+        "is_provisioning_key": false,
+        "limit": 250,
+        "limit_reset": "weekly",
+        "limit_remaining": 249.859717545,
+        "include_byok_in_limit": false,
+        "usage": 0.140282455,
+        "usage_daily": 0.140282455,
+        "usage_weekly": 0.140282455,
+        "usage_monthly": 0.140282455,
+        "byok_usage": 0,
+        "byok_usage_daily": 0,
+        "byok_usage_weekly": 0,
+        "byok_usage_monthly": 0,
+        "is_free_tier": false,
+        "expires_at": null,
+        "creator_user_id": "user_2qk5VgmFZsQeRDukJ7h0GmGk3Ox",
+        "organization_id": null,
+        "workspace_id": "63895f99-cf5d-56a4-ad63-6f161355764c",
+        "allowed_data_regions": [
+          "global"
+        ],
+        "free_model_daily_requests": {
+          "used": 0,
+          "limit": 1000,
+          "remaining": 1000
+        },
+        "rate_limit": {
+          "requests": -1,
+          "interval": "10s",
+          "note": "This field is deprecated and safe to ignore."
+        }
+      }
+    }
+  },
+  "results": [
+    {
+      "arm": "only=[relace], no fallback",
+      "answer": {
+        "status": 200,
+        "id": "gen-1790886769-sdbCplqhZ0T9eRNgGF1G",
+        "provider": "Relace",
+        "cost": 0.0000118032
+      }
+    },
+    {
+      "arm": "only=[open-inference/fp4], no fallback",
+      "answer": {
+        "status": 200,
+        "id": "gen-1790886769-SxfmX7vnjB2E4Feg5ja9",
+        "provider": "OpenInference",
+        "cost": 0.00000944
+      }
+    },
+    {
+      "arm": "only=[inference-net], no fallback",
+      "answer": {
+        "status": 200,
+        "id": "gen-1790886775-o0i5nAhvc9yCFSoHLEtj",
+        "provider": "InferenceNet",
+        "cost": 0.00001112
+      }
+    },
+    {
+      "arm": "only=[wafer], no fallback",
+      "answer": {
+        "status": 200,
+        "id": "gen-1790886776-CF00aBLPZ7RiA56zmBDt",
+        "provider": "Wafer",
+        "cost": 0.0000115
+      }
+    },
+    {
+      "arm": "only=[morph/fp8], no fallback",
+      "answer": {
+        "status": 200,
+        "id": "gen-1790886776-FDG4kCVXm4J9ipOIR6r1",
+        "provider": "Morph",
+        "cost": 0.000009358
+      }
+    },
+    {
+      "arm": "only=[sail-research/fp4], no fallback",
+      "answer": {
+        "status": 200,
+        "id": "gen-1790886778-lETSqDPay26IRLyshd46",
+        "provider": "Sail Research",
+        "cost": 0.00001024
+      }
+    },
+    {
+      "arm": "only=[ionstream], no fallback",
+      "answer": {
+        "status": 200,
+        "id": "gen-1790886778-mJqgkg6ijeYeRJhCRHDG",
+        "provider": "Ionstream",
+        "cost": 0.00003255
+      }
+    },
+    {
+      "arm": "only=[dekallm], no fallback",
+      "answer": {
+        "status": 200,
+        "id": "gen-1790886779-g2ZxLMrlXQlFgxLUrNHS",
+        "provider": "DekaLLM",
+        "cost": 0.00001216
+      }
+    },
+    {
+      "arm": "only=[io-net/fp8], no fallback",
+      "answer": {
+        "status": 200,
+        "id": "gen-1790886780-L9V1wbfLDP7DaJdduPpc",
+        "provider": "Io Net",
+        "cost": 0.00001276
+      }
+    },
+    {
+      "arm": "only=[deepinfra/fp8], no fallback",
+      "answer": {
+        "status": 200,
+        "id": "gen-1790886781-7mHFL8f9lN2FA4YGnKhq",
+        "provider": "DeepInfra",
+        "cost": 0.00001456
+      }
+    },
+    {
+      "arm": "only=[atlas-cloud/fp8], no fallback",
+      "answer": {
+        "status": 200,
+        "id": "gen-1790886781-NTQhjLWvhtxnkK4OXaPj",
+        "provider": "AtlasCloud",
+        "cost": 0.000014382
+      }
+    },
+    {
+      "arm": "sort=price, no fallback",
+      "i": 0,
+      "answer": {
+        "status": 200,
+        "id": "gen-1790886782-HvEzOftBU5pjAMSFaMtl",
+        "provider": "Relace",
+        "cost": 0.0000094032
+      }
+    },
+    {
+      "arm": "sort=price, no fallback",
+      "i": 1,
+      "answer": {
+        "status": 200,
+        "id": "gen-1790886783-eUFuYTu6j5ePMHzqjqK6",
+        "provider": "Relace",
+        "cost": 0.0000130032
+      }
+    },
+    {
+      "arm": "sort=price, no fallback",
+      "i": 2,
+      "answer": {
+        "status": 200,
+        "id": "gen-1790886783-ZRrKzHZFcsKARJ3GOzJS",
+        "provider": "Relace",
+        "cost": 0.0000136032
+      }
+    },
+    {
+      "arm": "sort=price, no fallback",
+      "i": 3,
+      "answer": {
+        "status": 200,
+        "id": "gen-1790886786-Gl8z4Jd3DSk6gUhubIUh",
+        "provider": "Relace",
+        "cost": 0.0000106032
+      }
+    },
+    {
+      "arm": "sort=price, with fallback + generation",
+      "i": 0,
+      "answer": {
+        "status": 200,
+        "id": "gen-1790886787-0JtNsejBXoST5t8xfdis",
+        "provider": "OpenInference",
+        "cost": 0.000012
+      },
+      "generation": {
+        "created_at": "2026-10-01T20:33:07.02Z",
+        "model": "deepseek/deepseek-v4.1-flash-20260910",
+        "app_id": null,
+        "external_user": null,
+        "streamed": true,
+        "cancelled": false,
+        "latency": 1760,
+        "moderation_latency": null,
+        "generation_time": 4866,
+        "tokens_prompt": 8,
+        "tokens_completion": 23,
+        "native_tokens_prompt": 38,
+        "native_tokens_completion": 23,
+        "native_tokens_completion_images": null,
+        "native_tokens_reasoning": 19,
+        "native_tokens_cached": 32,
+        "num_media_prompt": null,
+        "num_input_audio_prompt": null,
+        "num_media_completion": 0,
+        "num_search_results": null,
+        "num_fetches": null,
+        "web_search_engine": null,
+        "origin": "",
+        "is_byok": false,
+        "finish_reason": "stop",
+        "native_finish_reason": "stop",
+        "service_tier": null,
+        "usage": 0.000012,
+        "router": null,
+        "user_agent": "node",
+        "http_referer": null,
+        "request_id": "req-1790886787-rEbqJrwxXOn1DiLbKLoa",
+        "session_id": null,
+        "preset_id": null,
+        "api_type": "completions",
+        "id": "gen-1790886787-0JtNsejBXoST5t8xfdis",
+        "upstream_id": "chatcmpl-f5b7f41f-1e76-4a07-ae16-72fa44282591",
+        "provider_responses": [
+          {
+            "endpoint_id": "014281e2-a692-4f9a-9ee5-9ba5d6a0d53f",
+            "id": "chatcmpl-f5b7f41f-1e76-4a07-ae16-72fa44282591",
+            "is_byok": false,
+            "latency": 1760,
+            "model_permaslug": "deepseek/deepseek-v4.1-flash-20260910",
+            "provider_name": "OpenInference",
+            "status": 200
+          }
+        ],
+        "total_cost": 0.000012,
+        "cache_discount": 6.4e-7,
+        "upstream_inference_cost": 0,
+        "provider_name": "OpenInference",
+        "response_cache_source_id": null,
+        "data_region": "global",
+        "workspace_id": "63895f99-cf5d-56a4-ad63-6f161355764c"
+      }
+    },
+    {
+      "arm": "sort=price, with fallback + generation",
+      "i": 1,
+      "answer": {
+        "status": 200,
+        "id": "gen-1790886804-vLrMxPCEuAViByE0rBnG",
+        "provider": "OpenInference",
+        "cost": 0.00001644
+      },
+      "generation": {
+        "created_at": "2026-10-01T20:33:24.705Z",
+        "model": "deepseek/deepseek-v4.1-flash-20260910",
+        "app_id": null,
+        "external_user": null,
+        "streamed": true,
+        "cancelled": false,
+        "latency": 2020,
+        "moderation_latency": null,
+        "generation_time": 5949,
+        "tokens_prompt": 8,
+        "tokens_completion": 39,
+        "native_tokens_prompt": 38,
+        "native_tokens_completion": 32,
+        "native_tokens_completion_images": null,
+        "native_tokens_reasoning": 32,
+        "native_tokens_cached": 35,
+        "num_media_prompt": null,
+        "num_input_audio_prompt": null,
+        "num_media_completion": 0,
+        "num_search_results": null,
+        "num_fetches": null,
+        "web_search_engine": null,
+        "origin": "",
+        "is_byok": false,
+        "finish_reason": "length",
+        "native_finish_reason": "length",
+        "service_tier": null,
+        "usage": 0.00001644,
+        "router": null,
+        "user_agent": "node",
+        "http_referer": null,
+        "request_id": "req-1790886804-1DUXMV2RYJVsE138lmTC",
+        "session_id": null,
+        "preset_id": null,
+        "api_type": "completions",
+        "id": "gen-1790886804-vLrMxPCEuAViByE0rBnG",
+        "upstream_id": "chatcmpl-9e5448df-38cb-4b3c-b54c-8f017b7fb88b",
+        "provider_responses": [
+          {
+            "endpoint_id": "014281e2-a692-4f9a-9ee5-9ba5d6a0d53f",
+            "id": "chatcmpl-9e5448df-38cb-4b3c-b54c-8f017b7fb88b",
+            "is_byok": false,
+            "latency": 2020,
+            "model_permaslug": "deepseek/deepseek-v4.1-flash-20260910",
+            "provider_name": "OpenInference",
+            "status": 200
+          }
+        ],
+        "total_cost": 0.00001644,
+        "cache_discount": 7e-7,
+        "upstream_inference_cost": 0,
+        "provider_name": "OpenInference",
+        "response_cache_source_id": null,
+        "data_region": "global",
+        "workspace_id": "63895f99-cf5d-56a4-ad63-6f161355764c"
+      }
+    },
+    {
+      "arm": "sort=price, with fallback + generation",
+      "i": 2,
+      "answer": {
+        "status": 200,
+        "id": "gen-1790886823-1T1lcC7RgNT8sYDcl0KK",
+        "provider": "AtlasCloud",
+        "cost": 0.000016074
+      },
+      "generation": {
+        "created_at": "2026-10-01T20:33:43.331Z",
+        "model": "deepseek/deepseek-v4.1-flash-20260910",
+        "app_id": null,
+        "external_user": null,
+        "streamed": true,
+        "cancelled": false,
+        "latency": 937,
+        "moderation_latency": null,
+        "generation_time": 1032,
+        "tokens_prompt": 8,
+        "tokens_completion": 16,
+        "native_tokens_prompt": 38,
+        "native_tokens_completion": 19,
+        "native_tokens_completion_images": null,
+        "native_tokens_reasoning": 16,
+        "native_tokens_cached": 0,
+        "num_media_prompt": null,
+        "num_input_audio_prompt": null,
+        "num_media_completion": 0,
+        "num_search_results": null,
+        "num_fetches": null,
+        "web_search_engine": null,
+        "origin": "",
+        "is_byok": false,
+        "finish_reason": "stop",
+        "native_finish_reason": "stop",
+        "service_tier": "default",
+        "usage": 0.000016074,
+        "router": null,
+        "user_agent": "node",
+        "http_referer": null,
+        "request_id": "req-1790886823-qbzX83HYSmED4FEv0Och",
+        "session_id": null,
+        "preset_id": null,
+        "api_type": "completions",
+        "id": "gen-1790886823-1T1lcC7RgNT8sYDcl0KK",
+        "upstream_id": "53b6a4472b914a7ca4fe1e5508491820",
+        "provider_responses": [
+          {
+            "endpoint_id": "014281e2-a692-4f9a-9ee5-9ba5d6a0d53f",
+            "is_byok": false,
+            "latency": 43,
+            "model_permaslug": "deepseek/deepseek-v4.1-flash-20260910",
+            "provider_name": "OpenInference",
+            "status": 429
+          },
+          {
+            "endpoint_id": "29fdfd41-0ad8-4aaa-920a-d1c80534fb43",
+            "id": "53b6a4472b914a7ca4fe1e5508491820",
+            "is_byok": false,
+            "latency": 937,
+            "model_permaslug": "deepseek/deepseek-v4.1-flash-20260910",
+            "provider_name": "AtlasCloud",
+            "status": 200
+          }
+        ],
+        "total_cost": 0.000016074,
+        "cache_discount": null,
+        "upstream_inference_cost": 0,
+        "provider_name": "AtlasCloud",
+        "response_cache_source_id": null,
+        "data_region": "global",
+        "workspace_id": "63895f99-cf5d-56a4-ad63-6f161355764c"
+      }
+    }
+  ]
+}
