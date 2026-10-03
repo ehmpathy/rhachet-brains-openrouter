@@ -2,7 +2,7 @@
   "name": "rhachet-brains-openrouter",
   "author": "ehmpathy",
   "description": "rhachet brain.atom adapter for any model on openrouter, with supply filters in the slug",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "repository": "ehmpathy/rhachet-brains-openrouter",
   "homepage": "https://github.com/ehmpathy/rhachet-brains-openrouter",
   "keywords": [
