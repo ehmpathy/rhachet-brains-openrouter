@@ -44,7 +44,7 @@ exports[`rhachet-brains-openrouter.unit given: [case1] getBrainAtomsByOpenRouter
         "grades": {},
         "size": {
           "context": {
-            "tokens": 128000,
+            "tokens": 1000000,
           },
         },
         "skills": {
@@ -84,7 +84,7 @@ exports[`rhachet-brains-openrouter.unit given: [case1] getBrainAtomsByOpenRouter
         "grades": {},
         "size": {
           "context": {
-            "tokens": 128000,
+            "tokens": 1000000,
           },
         },
         "skills": {
@@ -124,7 +124,7 @@ exports[`rhachet-brains-openrouter.unit given: [case1] getBrainAtomsByOpenRouter
         "grades": {},
         "size": {
           "context": {
-            "tokens": 128000,
+            "tokens": 1000000,
           },
         },
         "skills": {
@@ -164,7 +164,7 @@ exports[`rhachet-brains-openrouter.unit given: [case1] getBrainAtomsByOpenRouter
         "grades": {},
         "size": {
           "context": {
-            "tokens": 128000,
+            "tokens": 1000000,
           },
         },
         "skills": {
@@ -204,7 +204,7 @@ exports[`rhachet-brains-openrouter.unit given: [case1] getBrainAtomsByOpenRouter
         "grades": {},
         "size": {
           "context": {
-            "tokens": 128000,
+            "tokens": 1000000,
           },
         },
         "skills": {
@@ -244,7 +244,7 @@ exports[`rhachet-brains-openrouter.unit given: [case1] getBrainAtomsByOpenRouter
         "grades": {},
         "size": {
           "context": {
-            "tokens": 128000,
+            "tokens": 1000000,
           },
         },
         "skills": {
@@ -286,7 +286,7 @@ BrainSpec {
     "grades": {},
     "size": {
       "context": {
-        "tokens": 128000,
+        "tokens": 1000000,
       },
     },
     "skills": {

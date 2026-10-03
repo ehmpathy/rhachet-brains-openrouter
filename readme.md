@@ -173,9 +173,13 @@ and holds that pick on this machine for 7 days.
 the tier is in the name on purpose. a bare `{author}/latest` would let a cheapfast caller drift onto
 a frontier model at many times the rate, with no signal.
 
-a tier's `spec` (rates, context, speed) is an **estimate for the tier**, not a quote for the model
-it picks — frontier $3 / $15 per 1M, cheapfast $0.30 / $2.00 per 1M. ci checks that each estimate
-sits at or above the cheapest live rate of the model picked today.
+a tier's rates are an **estimate for the tier**, not a quote for the model it picks — frontier
+$3 / $15 per 1M, cheapfast $0.30 / $2.00 per 1M. ci checks that each estimate sits at or above the
+cheapest live rate of the model picked today.
+
+a tier's context is its pick's window, **rounded down to a grain** (1M, 250K, 200K) — 1M for
+every tier today. hosts of one model differ by a few percent, so the grain fits every host. ci
+checks it against the live pick.
 
 ### any openrouter id — one exact model
 
@@ -198,7 +202,8 @@ see every id: https://openrouter.ai/models
 ```
 
 a withdrawn id fails with the date it was withdrawn, and the nearest live ids. every id shares one
-**placeholder** `spec` ($3 / $15 per 1M, 128K context).
+**placeholder** `spec` ($3 / $15 per 1M, 1M context). a prompt past what a model supports is
+refused by openrouter, loud.
 
 ### which names rhachet can choose
 
