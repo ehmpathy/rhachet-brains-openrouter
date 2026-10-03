@@ -39,6 +39,19 @@ const isPriceBelow = (input: { of: IsoPrice; below: IsoPrice }): boolean =>
   asIsoPriceShape(priceSub(input.of, input.below)).amount < 0n;
 
 /**
+ * .what = the context grains a spec may state, widest first
+ * .why = hosts of one model differ by a few percent; a grain fits them all
+ */
+const CONTEXT_GRAINS = [1_000_000, 250_000, 200_000];
+
+/**
+ * .what = rounds a live window down to its grain, or keeps it if below all
+ * .why = the spec never states more than a host serves
+ */
+const asContextGrain = (input: { tokens: number }): number =>
+  CONTEXT_GRAINS.find((grain) => grain <= input.tokens) ?? input.tokens;
+
+/**
  * .what = asks one model the cheapest question that still proves it serves
  * .why = a catalog read reports what a provider LISTS, never what it SERVES.
  *        so the probe must be a real completion
@@ -237,6 +250,54 @@ describe('BrainAtom.config.catalog.integration', () => {
 
       then('no tier estimate sits below its cheapest live rate', () => {
         expect(scene.low).toEqual([]);
+      });
+    });
+  });
+
+  // .why = a tier spec states its pick's window, rounded down to a grain. hosts
+  //        of one model differ by a few percent, so the grain fits each host;
+  //        a new pick of a different grain fails here, loud
+  given('[case4] every tier context, against its pick live window', () => {
+    when('[t0] each pick context_length is read', () => {
+      const scene = useThen('the reads succeed', async () => {
+        const response = await fetch('https://openrouter.ai/api/v1/models', {
+          headers: { Authorization: `Bearer ${API_KEY}` },
+        });
+        const body = (await response.json()) as {
+          data: { id: string; context_length: number }[];
+        };
+        const rows = [];
+        for (const tier of ALL_TIERS) {
+          const model = await getOneTierModel(
+            { tier, apiKey: API_KEY },
+            { sdkOpenRouterEndpoints },
+          );
+          const live =
+            body.data.find((entry) => entry.id === model)?.context_length ??
+            null;
+          const grain = live === null ? null : asContextGrain({ tokens: live });
+          const spec = TIER_BY_BARE_SLUG[tier].spec.gain.size.context.tokens;
+          rows.push({
+            line: `${tier} (${model}): spec ${spec}, live ${live}, grain ${grain}`,
+            off: grain !== spec,
+          });
+        }
+        console.log(
+          ['tier context spec vs live', ...rows.map((r) => r.line)].join('\n'),
+        );
+        return {
+          checked: rows.length,
+          off: rows.filter((r) => r.off).map((r) => r.line),
+        };
+      });
+
+      then('every tier was checked', () => {
+        // .why = guards the guard; zero rows passes the check below vacuously
+        expect(scene.checked).toEqual(ALL_TIERS.length);
+      });
+
+      then('every tier spec states its pick window grain', () => {
+        expect(scene.off).toEqual([]);
       });
     });
   });

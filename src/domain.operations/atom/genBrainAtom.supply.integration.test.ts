@@ -293,9 +293,23 @@ describe('genBrainAtom.supply.integration', () => {
         ),
       );
 
-      then('the answer is pong', () => {
-        expect(result.output.content.toLowerCase()).toContain('pong');
-      });
+      // .why = with no floor, any admitted host may serve, and a model's literal
+      //        words are not deterministic (observed: one reply skipped pong for
+      //        another word). the case proves the request shape; the word is
+      //        retried, so one odd reply from one host does not fail the suite
+      then.repeatably({ attempts: 3, criteria: 'SOME' })(
+        'the answer is pong',
+        async ({ attempt }) => {
+          const answer =
+            attempt === 1
+              ? result
+              : await atom.ask(
+                  { role: {}, prompt, schema: { output: outputSchema } },
+                  context,
+                );
+          expect(answer.output.content.toLowerCase()).toContain('pong');
+        },
+      );
 
       then('an admitted host served, with no walk', () => {
         const supply = asSupply(result);

@@ -40,7 +40,8 @@ const getApiKey = async (): Promise<string> => {
  *         1,170,442 bytes, 925 rows, 27 for this model. hence the slim index.
  */
 describe('sdkOpenRouterEndpoints.integration', () => {
-  jest.setTimeout(60000);
+  // .why = above case4's 120s per-ask deadline, so the deadline fires first
+  jest.setTimeout(180_000);
   const apiKey = useBeforeAll(async () => ({ value: await getApiKey() }));
 
   given('[case1] the live endpoints of deepseek-v4.1-flash', () => {
@@ -184,31 +185,47 @@ describe('sdkOpenRouterEndpoints.integration', () => {
           model: MODEL,
           apiKey: apiKey.value,
         });
-        // .note = each call is bounded: one hung host must not stall the case past
-        //         jest's limit. a timeout is an APIError, so it proves naught too
+        // .note = each ask is bounded end to end: one slow host must not stall the
+        //         case past jest's limit. the sdk `timeout` stops at the headers, so
+        //         a host that stalls its body hangs past it; the race below bounds
+        //         the body too, and the abort frees the socket. a slow or refused
+        //         host proves naught, so it settles to null
         const openai = new OpenAI({
           apiKey: apiKey.value,
           baseURL: 'https://openrouter.ai/api/v1',
-          timeout: 20_000,
           maxRetries: 0,
         });
+        const ASK_DEADLINE_MS = 120_000; // a slow host may take this long on its body
         const outcomes = await Promise.all(
           endpoints.map(async (endpoint) => {
-            const response = await openai.chat.completions
-              .create({
-                model: MODEL,
-                messages: [{ role: 'user', content: 'reply: ok' }],
-                max_tokens: 1,
-                ...{
-                  provider: {
-                    only: [endpoint.tag],
-                    allow_fallbacks: false,
+            const abort = new AbortController();
+            const deadline = new Promise<null>((settle) =>
+              setTimeout(() => {
+                abort.abort();
+                settle(null);
+              }, ASK_DEADLINE_MS).unref(),
+            );
+            const ask = openai.chat.completions
+              .create(
+                {
+                  model: MODEL,
+                  messages: [{ role: 'user', content: 'reply: ok' }],
+                  max_tokens: 1,
+                  ...{
+                    provider: {
+                      only: [endpoint.tag],
+                      allow_fallbacks: false,
+                    },
                   },
                 },
-              })
+                { signal: abort.signal },
+              )
               .catch((error: unknown) =>
-                error instanceof OpenAI.APIError ? null : Promise.reject(error),
+                error instanceof OpenAI.APIError || abort.signal.aborted
+                  ? null
+                  : Promise.reject(error),
               );
+            const response = await Promise.race([ask, deadline]);
             // a refused endpoint proves naught, so it is left out (undefined)
             return {
               tag: endpoint.tag,

@@ -60,7 +60,10 @@ export const SPEC_ESTIMATE_UNLISTED = new BrainSpec({
     },
   },
   gain: {
-    size: { context: { tokens: 128_000 } },
+    // .why = an unknown id gets the widest grain a current model reaches (1M,
+    //        read 2026-10-03). a prompt past what the model supports is refused
+    //        by openrouter, loud
+    size: { context: { tokens: 1_000_000 } },
     grades: {},
     cutoff: '2026-10-02',
     domain: 'ALL',

@@ -28,8 +28,10 @@ export type BrainSuppliesOpenRouter = {
  * .note = rates lean HIGH, so a budget check overstates the cost rather than
  *         under. the real charge rides back on each response as `usage.cost`,
  *         and lands in `metrics.cost.cash.total`
- * .note = context leans LOW, so a caller who sizes a prompt to the spec never
- *         overruns the model. every tier model read on 2026-10-02 held 1M
+ * .note = context is the pick's window, rounded down to a grain (1M, 250K,
+ *         200K). hosts differ by a few percent (1_000_000 to 1_048_576 on
+ *         deepseek v4.1-flash, read 2026-10-03), so the grain fits every host.
+ *         ci checks it against the live pick
  * .note = speed is the floor the default supply filters demand (≥ 50 tps)
  * .note = `cutoff` is an upper bound: the date these estimates were set
  */
@@ -51,7 +53,7 @@ export const SPEC_ESTIMATE_BY_TIER: Record<'pro' | 'flash', BrainSpec> = {
       },
     },
     gain: {
-      size: { context: { tokens: 128_000 } },
+      size: { context: { tokens: 1_000_000 } },
       grades: {},
       cutoff: '2026-10-02',
       domain: 'ALL',
@@ -75,7 +77,7 @@ export const SPEC_ESTIMATE_BY_TIER: Record<'pro' | 'flash', BrainSpec> = {
       },
     },
     gain: {
-      size: { context: { tokens: 128_000 } },
+      size: { context: { tokens: 1_000_000 } },
       grades: {},
       cutoff: '2026-10-02',
       domain: 'ALL',
