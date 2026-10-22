@@ -149,7 +149,9 @@ openrouter/{author}/{model}[/{filters}]    any id     openrouter/z-ai/glm-5.3/pr
 ```
 
 a slug with no filters of its own takes the **default filters**: `floor&speed=min50tps&privacy=full`.
-a slug with filters takes its own filters instead, whole — the default does not merge in.
+a slug with filters takes its own filters instead, whole — the default does not merge in. the one
+exception is a segment of `sort` alone, which orders hosts and promises naught, so it keeps the
+default.
 
 ### tiers — the newest model, with no release owed
 
@@ -208,8 +210,9 @@ refused by openrouter, loud.
 ### which names rhachet can choose
 
 rhachet matches a `choice` by exact name, so only listed names are choosable through
-`genContextBrain`, by discovery or by list: the five tiers, and
-`openrouter/deepseek/flash/floor&speed=min50tps&privacy=full`. for any other slug, call
+`genContextBrain`, by discovery or by list: the five tiers,
+`openrouter/deepseek/flash/floor&speed=min50tps&privacy=full`, and its fastest-first twin
+`openrouter/deepseek/flash/floor&speed=min50tps&privacy=full&sort=throughput`. for any other slug, call
 `genBrainAtom({ slug })` directly.
 
 ## supply filters — each word is a promise
@@ -218,23 +221,38 @@ join words with `&`, in any order, each key once.
 
 | word | the promise | how it holds |
 | --- | --- | --- |
-| `floor` | the cheapest endpoint, by input rate, that keeps every other promise | ranked live; one endpoint per attempt; a throttle, refusal, or bad reply moves on to the next cheapest |
+| `floor` | the cheapest endpoint, by input rate, that keeps every other promise | ranked live; one endpoint per attempt; a throttle, a refusal, a 502/503/504, a bad reply, a cut body, or a host silent for 10 min moves on to the next; the walk stops after two stalled hosts, and names the hosts left untried |
 | `speed=min50tps` · `speed.min=50tps` | only endpoints with a measured p50 ≥ 50 tok/s over the last 30 min | an unmeasured endpoint is excluded |
 | `precision=fp8` | only that quantization (`int4` `int8` `fp4` `fp6` `fp8` `fp16` `bf16` `fp32`) | filtered, plus openrouter's native `quantizations` |
 | `privacy=full` | only endpoints on openrouter's zero-data-retention list | filtered, plus native `zdr: true` and `data_collection: deny` |
 | `region=usa` | only endpoints whose tag carries a usa region (`{provider}/us`, `{provider}/us-east`) | a company's domicile is not its datacenter, so a base tag never qualifies |
 | `price.max=0.5usd/M` | never billed above this rate, for input **and** output alike | native `max_price`, one bound on both rates; no cap without this word |
+| `sort=throughput` · `sort=price` · `sort=latency` | the order hosts are tried in, among those that keep every promise | native `provider.sort`; under `floor`, the walk itself tries the fastest first for `throughput`. `latency` is refused under `floor` until a per-host latency figure is read. no key is sent without this word |
 
 and always:
 
 - your schema and tools are honored (`require_parameters: true`), so an endpoint that cannot serve
   them is never chosen
-- a json ask goes only to endpoints that declare `structured_outputs`. a host that answers prose
-  where json was owed is skipped on this machine for 7 days
+- a json ask goes only to endpoints that declare `structured_outputs`. a host that answers prose,
+  or 0 chars, where json was owed is skipped on this machine for 7 days
+
+### `sort`, beside the other words
+
+- `sort` orders hosts among those that keep every promise; it never admits a host a promise drops.
+  an affinity pin, once one lands, picks first, and `sort` orders what the pin leaves
+- a segment of `sort` alone keeps the default promises: `openrouter/deepseek/flash/sort=throughput`
+  is `floor&speed=min50tps&privacy=full&sort=throughput`. a segment that writes any promise
+  replaces the default whole, as for every other word. a lone `sort=latency` meets the default's
+  `floor`, so it is refused, as the written-out slug would be
+- without `floor`, openrouter tries the admitted set in sort order. fallbacks are on inside
+  `only` (`allow_fallbacks: true`), so a throttled top host steps aside for the next. `only` still
+  bounds every hop, so no fallback leaves the hosts that keep your promises. an ask with no sort
+  keeps 0.1.3's `allow_fallbacks: false`
 
 ### what is enforced, and what is attested
 
-- **enforced** — every call names the endpoints it accepts (`only: [...]`, no fallback). the
+- **enforced** — every call names the endpoints it accepts (`only: [...]`), and no hop, fallback
+  included, leaves that list. the
   response must name one of them, or no answer is returned
 - **attested** — that a host keeps no data (`privacy`), runs the quantization it declares
   (`precision`), or sits in the region its tag names (`region`) is the host's own claim, screened
@@ -242,8 +260,10 @@ and always:
 
 ### the charge, and the supply report
 
-`metrics.cost.cash.total` is openrouter's own charge (`usage.cost`). the per-token breakdown beside
-it is an estimate from the `spec`, and may not sum to the total.
+`metrics.cost.cash.total` is openrouter's own charge (`usage.cost`) for the reply that served. the
+per-token breakdown beside it is an estimate from the `spec`, and may not sum to the total. on a
+`floor` walk, a host the walk stepped past may have billed too (an empty or prose reply, say);
+that spend is in openrouter's activity log, not in `cash.total`.
 
 each ask also reports how it was supplied, as `output.supply`. rhachet's `BrainOutput` does not
 declare that field yet, so read it through a cast:
@@ -256,14 +276,16 @@ const supply = (result as unknown as { supply: SupplyReport }).supply;
 // supply.provider       who served
 // supply.generationId   audit the served endpoint later via GET /generation
 // supply.attempts       each hop, in order — see below
-// supply.choice         how many endpoints survived each filter, and each rate
+// supply.choice         how many endpoints survived each filter, each rate, and the sort
 ```
 
 `supply.attempts` lists each endpoint tried, in order, in both supply modes. the last row is the
-endpoint that served, marked `served`. each row before it is a host fault (`throttled`,
-`refused`, `failed`) or a reply in prose where json was owed (`prose`).
+endpoint that served, marked `served`. each row before it is a host fault: `throttled`,
+`refused`, `failed`, `body-cut`, `stalled`, or a json ask the host answered in prose (`prose`) or
+with 0 chars (`empty`).
 
-- **floor** — one row per endpoint tried, cheapest first
+- **floor** — one row per endpoint tried, in queue order (cheapest first, or fastest first under
+  `sort=throughput`)
 - **no floor** — one row per endpoint dropped after a host fault. a send that serves at once
   holds one row: the serve
 
@@ -271,24 +293,81 @@ the hops are silent on success. log `supply.attempts` to see why an ask ran slow
 
 ### host faults
 
-both modes step past a host that faults: a 429 (`throttled`), a 404 (`refused`), or a 400 that
-openrouter marks as the host's own (`Provider returned error`, or a named host) — `failed`. the
-floor walk steps to the next endpoint. without a floor, the host openrouter named leaves the
-admitted set and the ask is re-sent to the rest.
+both modes step past a host that faults: a 429 (`throttled`), a 404 (`refused`), a 400 that
+openrouter marks as the host's own (`Provider returned error`, or a named host), or a 502/503/504
+— the last two `failed`. the floor walk steps to the next endpoint. without a floor, the host
+openrouter named leaves the admitted set and the ask is re-sent to the rest. a bare 500 may be
+openrouter's own fault, so it rethrows untouched, as 0.1.3.
+
+the floor walk also steps past a reply the host broke: one that failed mid-reply (`failed`), a
+json ask answered in prose (`prose`) or with 0 chars (`empty`) — both hosts skipped by json asks
+for 7 days on this machine — a body cut mid-json (`body-cut`), and a host that sent no whole reply
+inside the 10-minute hop bound (`stalled`). a walk stops after two stalls. a reply cut at the
+output limit never steps: the next host would spend the same thought again.
 
 a host fault openrouter marks as a host's (`Provider returned error`) yet names no admitted host
 cannot say which host to drop, so the rest of the ask walks the set one endpoint per send, as a
 floor walk does. without a floor, a fault with no host mark is openrouter's own answer — its
 `429 Rate limit exceeded` (the account limit), or a 404 for a withdrawn model. no other host can
-fix it, so it rethrows untouched after one send. the floor walk admits one endpoint per send, so it
-reads any 429 or 404 as that endpoint's and steps on. a caller's own 400 rethrows as it came,
-after one send, in both modes.
+fix it, so it rethrows untouched after one send. a cut body or a stall names no host either, so
+without a floor it ends in `HostFaultError` after one send. the floor walk admits one endpoint per
+send, so it reads any 429 or 404 as that endpoint's and steps on. a caller's own 400 rethrows as
+it came, after one send, in both modes.
 
 openrouter's `retry-after` is reported in the refusal, not waited on between hops. the openai
 client retries each 429 twice on its own before a hop, and those retries do wait out
 `retry-after`, up to 60s each. so a host that asks for 30s costs about a minute before the hop. a
 walk after a marked fault that names no host retries twice more per host, so it costs about two
 minutes before the next host serves.
+
+## thought cap — effort
+
+a model that thinks before it answers can spend its whole reply on thought. cap it per ask with
+rhachet's `effort`, which goes to openrouter as `reasoning`:
+
+```ts
+const result = await brainAtom.ask(
+  { role, prompt, schema: { output }, effort: { budget: { tokens: 6000 } } },
+  context,
+);
+result.metrics.size.tokens.thought; // thought tokens the host spent, or null where it reports none
+```
+
+`thought` is a part of `output`, not an addition to it: the host bills thought as output tokens,
+and `output` already counts them. never add `thought` on top of `output`.
+
+| `effort` | sent as | note |
+| --- | --- | --- |
+| unset | no `reasoning` key | the host's default, as before |
+| `{ budget: { tokens: N } }` | `reasoning: { max_tokens: N }` | N a positive integer |
+| `'low'` · `{ level: 'low' }` | `reasoning: { effort: 'low' }` | `minimal` `low` `medium` `high` (`spec.supports.effort`) |
+
+an ask with `effort` goes only to hosts that list `reasoning`, and a budget goes only to hosts
+whose output limit exceeds it, so the answer has room. a reply that still spent every output
+token on thought and wrote no answer is refused by name, with the budget to set.
+
+⚠️ a host that lists `reasoning` may still not honor a budget. measured 2026-10-21 on a
+thought-heavy prompt: deepseek flash's host thought 179–489 tokens under every budget from 300 to
+2400, while z-ai flash's host thought 875–1218 whatever the budget. `metrics.size.tokens.thought`
+shows what each ask spent, and an all-thought reply from a host that overran its budget names
+that host rather than a lower budget.
+
+⚠️ `effort` comes from rhachet's open proposal ehmpathy/rhachet#595. this package patches its local
+rhachet with that shape (`patches/rhachet@1.50.0.patch`); a consumer's rhachet types accept
+`effort` once #595 releases.
+
+⚠️ **every ask now carries a 10-minute bound per hop, set or not.** an ask with no `effort` and no
+`sort` sends the 0.1.3 request body byte for byte, but a host that sends no whole reply inside 10
+minutes now ends in a named error rather than a hang, and a no-`floor` host that cuts its body ends
+in `HostFaultError` rather than a raw `SyntaxError`. the bound is fixed; to make a slow ask finish
+inside it, cap thought via `effort`. a `floor` walk stops after two stalled hosts, so stalls cost
+it at most about 20 minutes before the named error. other failed hops are not bounded by count:
+a host that answers 0 chars after long thought costs its own time, then the walk moves on. a hop the bound aborts may
+still be billed by its host; that spend shows in no metric, since no reply came back to read.
+
+the supply report changes shape too, for every ask: a json ask's funnel shows one step per param
+(`supports(response_format)`, then `supports(structured_outputs)`) where 0.1.3 showed one combined
+step, and `supply.choice` gains `sort` (`null` where the slug writes none).
 
 ### refusals — each names its fix
 
@@ -299,7 +378,12 @@ minutes before the next host serves.
 | an id openrouter does not list | `ConstraintError`, before any call — the nearest ids |
 | a tier whose line holds no live model | `ConstraintError`, before any call — names the line |
 | a literal pattern, e.g. `openrouter/*/*` | `ConstraintError` — a pattern is not a model |
-| every qualified endpoint throttles, refuses, fails with its own error, or answers badly — with or without a floor | `MalfunctionError` — each attempt listed, openrouter's `retry-after`, and the last host's own reason (e.g. a context limit, which needs a fix to the request, not a retry) |
+| an `effort` that is malformed, or names a level not in `spec.supports.effort` | `ConstraintError`, before any call — the valid shapes |
+| `sort=latency` under `floor` | `ConstraintError`, before any call — names `sort=throughput`, or a slug with no `floor` |
+| every qualified endpoint throttles, refuses, fails with its own error, cuts its body, stalls, or answers badly — with or without a floor | `MalfunctionError` — each attempt listed, openrouter's `retry-after`, and the last host's own reason (e.g. a context limit, which needs a fix to the request, not a retry) |
+| on a slug with no `floor`, the admitted host cuts its body or sends no whole reply inside 10 min | `HostFaultError` (a `MalfunctionError`, `fault: body-cut` or `stalled`), naming every admitted host — never a raw `SyntaxError`, never a hang. add `floor` to step past a faulted host |
+| two hosts stall in one walk | `MalfunctionError` — the walk stops; each attempt listed, and the count of hosts left untried |
+| the host spent every output token on thought and wrote no answer | `MalfunctionError` (`metadata.defect: 'all-thought'`) — the thought count, and the fix: a budget to set, a lower level, or, where the host thought far past the budget, a note that it ignored the cap |
 | openrouter has withdrawn the model | `ConstraintError` — the date it was withdrawn, and the nearest live ids |
 | the response names a provider the call did not accept | `MalfunctionError` — the answer is withheld |
 | 402 no credits · 401 bad key | `ConstraintError` — names the credits page or the keyrack fill |
@@ -315,7 +399,7 @@ shared by every process on the machine:
 | the endpoint list, per model | 30 min — the window of openrouter's throughput stat |
 | the zero-retention list | fresh for 60 min, then served while a refresh runs behind, up to 24h |
 | the model each tier picked | 7 days, or until openrouter dates it for withdrawal |
-| a host that answered prose where json was owed | 7 days |
+| a host that answered prose, or 0 chars, where json was owed | 7 days |
 
 a stale zero-retention list is safe: each `privacy=full` call also sends `zdr: true`, so openrouter
 refuses an endpoint that left the list. the api key never enters a cache key. the reads cost ~190ms

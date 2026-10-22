@@ -53,7 +53,7 @@ exports[`getOneFloorCompletion given: [case3] the cheapest endpoint is refused a
 `;
 
 exports[`getOneFloorCompletion given: [case4] every qualified endpoint throttles, refuses, or fails when: [t0] the walk runs then: the message matches snapshot 1`] = `
-"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), or answered prose where json was owed. no answer was returned.
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), cut its body, stalled, or answered prose or 0 chars where json was owed. no answer was returned.
 
   throttled cheap
   refused   mid
@@ -78,7 +78,11 @@ fix: retry after 7s (openrouter's retry-after), or loosen a promise so more endp
     }
   ],
   "retryAfter": "7",
-  "faultReasonLast": null
+  "faultReasonLast": null,
+  "untried": 0,
+  "bound": {
+    "milliseconds": 50
+  }
 }"
 `;
 
@@ -127,7 +131,7 @@ exports[`getOneFloorCompletion given: [case9] the cheapest endpoint returns a ho
 exports[`getOneFloorCompletion given: [case10] the cheapest endpoint returns the caller's own 400 when: [t0] the walk runs then: the error rethrows untouched, and no other endpoint is tried 1`] = `"400 messages: field required"`;
 
 exports[`getOneFloorCompletion given: [case12] a host 400 names a reason, then the later hosts fail mid-reply when: [t0] the walk runs then: the message matches snapshot 1`] = `
-"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), or answered prose where json was owed. no answer was returned.
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), cut its body, stalled, or answered prose or 0 chars where json was owed. no answer was returned.
 
   failed    cheap
   failed    mid
@@ -152,6 +156,41 @@ fix: retry later, or loosen a promise so more endpoints qualify.
     }
   ],
   "retryAfter": null,
-  "faultReasonLast": null
+  "faultReasonLast": null,
+  "untried": 0,
+  "bound": {
+    "milliseconds": 50
+  }
+}"
+`;
+
+exports[`getOneFloorCompletion given: [case13] the cheapest endpoint cuts its body or stalls (case=9) when: [t3] every qualified host stalls then: the message a caller reads matches snapshot 1`] = `
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: the walk stopped after 2 stalled hosts, with 1 untried. no answer was returned.
+
+  stalled   cheap
+  stalled   mid
+
+fix: retry later; 1 qualified host was left untried, so a looser promise would not help.
+a stalled host sent no whole reply inside 50ms. the bound ends a dead host;
+if answers are slow rather than dead, cap thought (effort on the ask), never a longer bound.
+
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "attempts": [
+    {
+      "tag": "cheap",
+      "outcome": "stalled"
+    },
+    {
+      "tag": "mid",
+      "outcome": "stalled"
+    }
+  ],
+  "retryAfter": null,
+  "faultReasonLast": null,
+  "untried": 1,
+  "bound": {
+    "milliseconds": 50
+  }
 }"
 `;

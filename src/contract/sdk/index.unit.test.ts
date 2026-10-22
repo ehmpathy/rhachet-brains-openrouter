@@ -7,9 +7,27 @@ import { genBrainAtom } from '../../domain.operations/atom/genBrainAtom';
 import { SLUGS_FILTERED_LISTED } from '../../domain.operations/atom/slug/AtomSlug.filtered';
 import { SPEC_ESTIMATE_UNLISTED } from '../../domain.operations/atom/slug/AtomSlug.unlisted';
 import { getAllAtomSlugs } from '../../domain.operations/atom/slug/getAllAtomSlugs';
+import * as packageExports from './index';
 import { getBrainAtomsByOpenRouter } from './index';
 
 describe('rhachet-brains-openrouter.unit', () => {
+  // .why = a caller writes `error instanceof HostFaultError`; a dropped re-export must go red
+  given('[case0] the package export surface', () => {
+    when('[t0] the runtime exports are listed', () => {
+      then('each value a caller imports is exported', () => {
+        expect(packageExports.HostFaultError).toBeInstanceOf(Function);
+        expect(packageExports.genBrainAtom).toBeInstanceOf(Function);
+        expect(packageExports.getBrainAtomsByOpenRouter).toBeInstanceOf(
+          Function,
+        );
+      });
+
+      then('the export names match snapshot', () => {
+        expect(Object.keys(packageExports).sort()).toMatchSnapshot();
+      });
+    });
+  });
+
   given('[case1] getBrainAtomsByOpenRouter', () => {
     when('[t0] called', () => {
       const atoms = getBrainAtomsByOpenRouter();

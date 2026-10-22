@@ -8,12 +8,17 @@ fix: retry the ask. if it recurs, admit other providers via filters, or choose a
 audit: https://openrouter.ai/activity — generation gen-1, provider DeepInfra
 
 {
+  "defect": "failed",
   "finishReason": null,
   "provider": "DeepInfra",
   "generationId": "gen-1",
   "contentLength": 0,
   "tokensOutput": null,
-  "errorMessage": "Provider returned error"
+  "tokensThought": null,
+  "tokensThoughtBudget": null,
+  "thoughtLevel": null,
+  "errorMessage": "Provider returned error",
+  "costUsd": null
 }"
 `;
 
@@ -24,12 +29,17 @@ fix: ask via a floor slug — the floor walk steps past a host that answers pros
 audit: https://openrouter.ai/activity — generation gen-1, provider DeepInfra
 
 {
+  "defect": "prose",
   "finishReason": "stop",
   "provider": "DeepInfra",
   "generationId": "gen-1",
   "contentLength": 21,
   "tokensOutput": 0,
-  "errorMessage": null
+  "tokensThought": null,
+  "tokensThoughtBudget": null,
+  "thoughtLevel": null,
+  "errorMessage": null,
+  "costUsd": null
 }"
 `;
 
@@ -40,28 +50,80 @@ fix: retry the ask. if it recurs, admit other providers via filters, or choose a
 audit: https://openrouter.ai/activity — generation gen-1, provider DeepInfra
 
 {
+  "defect": "failed",
   "finishReason": "error",
   "provider": "DeepInfra",
   "generationId": "gen-1",
   "contentLength": 0,
   "tokensOutput": 0,
-  "errorMessage": null
+  "tokensThought": null,
+  "tokensThoughtBudget": null,
+  "thoughtLevel": null,
+  "errorMessage": null,
+  "costUsd": null
 }"
 `;
 
 exports[`getOneReplyDefectError a reply cut at the output limit is refused, as partial 1`] = `
+"💥 MalfunctionError: openrouter's reply was cut off at the output limit (finish_reason=length), after 4000 output tokens (400 of them thought). the partial reply is withheld.
+
+fix: ask for a shorter reply, or choose a model with a larger output limit
+audit: https://openrouter.ai/activity — generation gen-1, provider DeepInfra
+
+{
+  "defect": "cut-off",
+  "finishReason": "length",
+  "provider": "DeepInfra",
+  "generationId": "gen-1",
+  "contentLength": 12,
+  "tokensOutput": 4000,
+  "tokensThought": 400,
+  "tokensThoughtBudget": null,
+  "thoughtLevel": null,
+  "errorMessage": null,
+  "costUsd": null
+}"
+`;
+
+exports[`getOneReplyDefectError a reply cut at the output limit, mostly thought, names a thought cap as its fix 1`] = `
+"💥 MalfunctionError: openrouter's reply was cut off at the output limit (finish_reason=length), after 4000 output tokens (3800 of them thought). the partial reply is withheld.
+
+fix: cap thought (effort on the ask), since 3800 of 4000 output tokens were thought, so the answer has room
+audit: https://openrouter.ai/activity — generation gen-1, provider DeepInfra
+
+{
+  "defect": "cut-off",
+  "finishReason": "length",
+  "provider": "DeepInfra",
+  "generationId": "gen-1",
+  "contentLength": 12,
+  "tokensOutput": 4000,
+  "tokensThought": 3800,
+  "tokensThoughtBudget": null,
+  "thoughtLevel": null,
+  "errorMessage": null,
+  "costUsd": null
+}"
+`;
+
+exports[`getOneReplyDefectError a reply cut at the output limit, with 0 output tokens and no usage detail, names the cut 1`] = `
 "💥 MalfunctionError: openrouter's reply was cut off at the output limit (finish_reason=length), after 0 output tokens. the partial reply is withheld.
 
 fix: ask for a shorter reply, or choose a model with a larger output limit
 audit: https://openrouter.ai/activity — generation gen-1, provider DeepInfra
 
 {
+  "defect": "cut-off",
   "finishReason": "length",
   "provider": "DeepInfra",
   "generationId": "gen-1",
   "contentLength": 12,
   "tokensOutput": 0,
-  "errorMessage": null
+  "tokensThought": null,
+  "tokensThoughtBudget": null,
+  "thoughtLevel": null,
+  "errorMessage": null,
+  "costUsd": null
 }"
 `;
 
@@ -72,12 +134,191 @@ fix: retry the ask. if it recurs, admit other providers via filters, or choose a
 audit: https://openrouter.ai/activity — generation gen-1, provider DeepInfra
 
 {
+  "defect": "failed",
   "finishReason": null,
   "provider": "DeepInfra",
   "generationId": "gen-1",
   "contentLength": 0,
   "tokensOutput": 0,
-  "errorMessage": null
+  "tokensThought": null,
+  "tokensThoughtBudget": null,
+  "thoughtLevel": null,
+  "errorMessage": null,
+  "costUsd": null
+}"
+`;
+
+exports[`getOneReplyDefectError an all-thought reply from a host with a vast output room suggests a capped budget, never the room 1`] = `
+"💥 MalfunctionError: openrouter's host spent the whole reply on thought, and wrote no answer (383990 of 384000 output tokens were thought; finish_reason=length; 0 chars of answer).
+
+fix: budget thought below the output room, so the answer has space —
+  atom.ask({ ...input, effort: { budget: { tokens: 8000 } } })
+audit: https://openrouter.ai/activity — generation gen-1, provider DeepInfra
+
+{
+  "defect": "all-thought",
+  "finishReason": "length",
+  "provider": "DeepInfra",
+  "generationId": "gen-1",
+  "contentLength": 0,
+  "tokensOutput": 384000,
+  "tokensThought": 383990,
+  "tokensThoughtBudget": null,
+  "thoughtLevel": null,
+  "errorMessage": null,
+  "costUsd": null
+}"
+`;
+
+exports[`getOneReplyDefectError an all-thought reply names what openrouter billed for it 1`] = `
+"💥 MalfunctionError: openrouter's host spent the whole reply on thought, and wrote no answer (4000 of 4000 output tokens were thought; finish_reason=length; 0 chars of answer), billed $0.0172.
+
+fix: budget thought below the output room, so the answer has space —
+  atom.ask({ ...input, effort: { budget: { tokens: 3000 } } })
+audit: https://openrouter.ai/activity — generation gen-1, provider DeepInfra
+
+{
+  "defect": "all-thought",
+  "finishReason": "length",
+  "provider": "DeepInfra",
+  "generationId": "gen-1",
+  "contentLength": 0,
+  "tokensOutput": 4000,
+  "tokensThought": 4000,
+  "tokensThoughtBudget": null,
+  "thoughtLevel": null,
+  "errorMessage": null,
+  "costUsd": 0.0172
+}"
+`;
+
+exports[`getOneReplyDefectError an all-thought reply that thought far past its budget names the host that ignored the cap 1`] = `
+"💥 MalfunctionError: openrouter's host spent the whole reply on thought, and wrote no answer (383990 of 384000 output tokens were thought; finish_reason=length; 0 chars of answer).
+
+fix: the host did not honor effort.budget.tokens (383990 thought against a budget of 6000), so a lower budget will not help. admit other providers via filters, or choose another model
+audit: https://openrouter.ai/activity — generation gen-1, provider DeepInfra
+
+{
+  "defect": "all-thought",
+  "finishReason": "length",
+  "provider": "DeepInfra",
+  "generationId": "gen-1",
+  "contentLength": 0,
+  "tokensOutput": 384000,
+  "tokensThought": 383990,
+  "tokensThoughtBudget": 6000,
+  "thoughtLevel": null,
+  "errorMessage": null,
+  "costUsd": null
+}"
+`;
+
+exports[`getOneReplyDefectError an all-thought reply under a level names a lower level, or a budget 1`] = `
+"💥 MalfunctionError: openrouter's host spent the whole reply on thought, and wrote no answer (7990 of 8000 output tokens were thought; finish_reason=length; 0 chars of answer).
+
+fix: lower effort (now 'high'), or set a budget so the answer has space —
+  atom.ask({ ...input, effort: { budget: { tokens: 6000 } } })
+audit: https://openrouter.ai/activity — generation gen-1, provider DeepInfra
+
+{
+  "defect": "all-thought",
+  "finishReason": "length",
+  "provider": "DeepInfra",
+  "generationId": "gen-1",
+  "contentLength": 0,
+  "tokensOutput": 8000,
+  "tokensThought": 7990,
+  "tokensThoughtBudget": null,
+  "thoughtLevel": "high",
+  "errorMessage": null,
+  "costUsd": null
+}"
+`;
+
+exports[`getOneReplyDefectError an all-thought reply under the lowest level names a budget, never a lower level 1`] = `
+"💥 MalfunctionError: openrouter's host spent the whole reply on thought, and wrote no answer (7990 of 8000 output tokens were thought; finish_reason=length; 0 chars of answer).
+
+fix: effort is already at its lowest level ('minimal'). set a budget so the answer has space —
+  atom.ask({ ...input, effort: { budget: { tokens: 6000 } } })
+audit: https://openrouter.ai/activity — generation gen-1, provider DeepInfra
+
+{
+  "defect": "all-thought",
+  "finishReason": "length",
+  "provider": "DeepInfra",
+  "generationId": "gen-1",
+  "contentLength": 0,
+  "tokensOutput": 8000,
+  "tokensThought": 7990,
+  "tokensThoughtBudget": null,
+  "thoughtLevel": "minimal",
+  "errorMessage": null,
+  "costUsd": null
+}"
+`;
+
+exports[`getOneReplyDefectError an all-thought reply with a budget names the budget to lower (case=2 [t1]) 1`] = `
+"💥 MalfunctionError: openrouter's host spent the whole reply on thought, and wrote no answer (7900 of 8000 output tokens were thought; finish_reason=length; 0 chars of answer).
+
+fix: lower effort.budget.tokens (now 7900), so the answer has space
+audit: https://openrouter.ai/activity — generation gen-1, provider DeepInfra
+
+{
+  "defect": "all-thought",
+  "finishReason": "length",
+  "provider": "DeepInfra",
+  "generationId": "gen-1",
+  "contentLength": 0,
+  "tokensOutput": 8000,
+  "tokensThought": 7900,
+  "tokensThoughtBudget": 7900,
+  "thoughtLevel": null,
+  "errorMessage": null,
+  "costUsd": null
+}"
+`;
+
+exports[`getOneReplyDefectError an all-thought reply with no budget names the thought, and a budget to set (case=2 [t2]) 1`] = `
+"💥 MalfunctionError: openrouter's host spent the whole reply on thought, and wrote no answer (7998 of 8000 output tokens were thought; finish_reason=length; 0 chars of answer).
+
+fix: budget thought below the output room, so the answer has space —
+  atom.ask({ ...input, effort: { budget: { tokens: 6000 } } })
+audit: https://openrouter.ai/activity — generation gen-1, provider DeepInfra
+
+{
+  "defect": "all-thought",
+  "finishReason": "length",
+  "provider": "DeepInfra",
+  "generationId": "gen-1",
+  "contentLength": 0,
+  "tokensOutput": 8000,
+  "tokensThought": 7998,
+  "tokensThoughtBudget": null,
+  "thoughtLevel": null,
+  "errorMessage": null,
+  "costUsd": null
+}"
+`;
+
+exports[`getOneReplyDefectError an all-thought reply with no usage counts names a placeholder budget, never a guess 1`] = `
+"💥 MalfunctionError: openrouter's host spent the whole reply on thought, and wrote no answer (? of 0 output tokens were thought; finish_reason=length; 0 chars of answer).
+
+fix: budget thought below the output room, so the answer has space —
+  atom.ask({ ...input, effort: { budget: { tokens: N } } })
+audit: https://openrouter.ai/activity — generation gen-1, provider DeepInfra
+
+{
+  "defect": "all-thought",
+  "finishReason": "length",
+  "provider": "DeepInfra",
+  "generationId": "gen-1",
+  "contentLength": 0,
+  "tokensOutput": 0,
+  "tokensThought": null,
+  "tokensThoughtBudget": null,
+  "thoughtLevel": null,
+  "errorMessage": null,
+  "costUsd": null
 }"
 `;
 
@@ -88,11 +329,16 @@ fix: retry the ask. if it recurs, admit other providers via filters, or choose a
 audit: https://openrouter.ai/activity — generation gen-1, provider DeepInfra
 
 {
+  "defect": "empty",
   "finishReason": "stop",
   "provider": "DeepInfra",
   "generationId": "gen-1",
   "contentLength": 0,
   "tokensOutput": 0,
-  "errorMessage": null
+  "tokensThought": null,
+  "tokensThoughtBudget": null,
+  "thoughtLevel": null,
+  "errorMessage": null,
+  "costUsd": null
 }"
 `;

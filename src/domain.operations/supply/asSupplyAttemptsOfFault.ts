@@ -1,4 +1,5 @@
 import type { FloorAttempt } from '../../domain.objects/FloorAttempt';
+import type { HostFault } from '../../domain.objects/HostFault';
 import type { OpenRouterEndpoint } from '../../domain.objects/OpenRouterEndpoint';
 
 /**
@@ -7,7 +8,7 @@ import type { OpenRouterEndpoint } from '../../domain.objects/OpenRouterEndpoint
  */
 export const asSupplyAttemptsOfFault = (input: {
   endpoints: OpenRouterEndpoint[];
-  outcome: 'throttled' | 'refused' | 'failed';
+  outcome: HostFault;
 }): FloorAttempt[] =>
   input.endpoints.map((endpoint) => ({
     tag: endpoint.tag,

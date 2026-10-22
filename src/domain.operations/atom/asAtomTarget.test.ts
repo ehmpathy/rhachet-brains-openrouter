@@ -49,6 +49,45 @@ describe('asAtomTarget', () => {
         );
       });
     });
+
+    // 🔴 .why = the natural way to write "fast host" must never drop zero data retention;
+    //           a sort word orders hosts and promises naught, so it keeps the default
+    when('[t3] a tier with only a sort word is cast', () => {
+      then('it keeps the default promises, and adds the order', () => {
+        const target = asAtomTarget({
+          slug: 'openrouter/deepseek/flash/sort=throughput',
+        });
+        expect(target.filters).toEqual(
+          asSupplyFilters({
+            segment: 'floor&speed=min50tps&privacy=full&sort=throughput',
+          }),
+        );
+        expect(target.filterSuffix).toEqual('/sort=throughput');
+      });
+    });
+
+    when('[t4] a tier with a sort word beside a promise is cast', () => {
+      then('its own filters replace the default whole, as before', () => {
+        const target = asAtomTarget({
+          slug: 'openrouter/deepseek/flash/region=usa&sort=throughput',
+        });
+        expect(target.filters).toEqual(
+          asSupplyFilters({ segment: 'region=usa&sort=throughput' }),
+        );
+      });
+    });
+
+    // 🔴 .why = the merge must meet the default's checks: a latency sort under the
+    //           default's floor is refused, never walked cheapest-first under its name
+    when('[t5] a tier with only sort=latency is cast', () => {
+      then('it is refused, as the written-out slug would be', () => {
+        const error = getError(() =>
+          asAtomTarget({ slug: 'openrouter/deepseek/flash/sort=latency' }),
+        );
+        expect(error).toBeInstanceOf(ConstraintError);
+        expect(error.message).toContain('cannot order by latency');
+      });
+    });
   });
 
   given('[case2] an unlisted openrouter id (case=20)', () => {

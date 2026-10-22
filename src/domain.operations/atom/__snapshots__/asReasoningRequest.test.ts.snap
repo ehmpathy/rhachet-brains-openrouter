@@ -1,0 +1,136 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`asReasoningRequest refuses a fractional budget, before any call (case=7) 1`] = `
+"✋ ConstraintError: invalid effort for openrouter/deepseek/flash: tokens must be a positive integer
+  got: effort = {"budget":{"tokens":1500.5}}
+
+valid shapes, one of:
+  - effort: 'minimal' | 'low' | 'medium' | 'high'   (≡ { level: … })
+  - effort: { budget: { tokens: N } }   N a positive integer
+
+{
+  "effort": {
+    "budget": {
+      "tokens": 1500.5
+    }
+  },
+  "slug": "openrouter/deepseek/flash"
+}"
+`;
+
+exports[`asReasoningRequest refuses a negative budget, before any call (case=7) 1`] = `
+"✋ ConstraintError: invalid effort for openrouter/deepseek/flash: tokens must be a positive integer
+  got: effort = {"budget":{"tokens":-200}}
+
+valid shapes, one of:
+  - effort: 'minimal' | 'low' | 'medium' | 'high'   (≡ { level: … })
+  - effort: { budget: { tokens: N } }   N a positive integer
+
+{
+  "effort": {
+    "budget": {
+      "tokens": -200
+    }
+  },
+  "slug": "openrouter/deepseek/flash"
+}"
+`;
+
+exports[`asReasoningRequest refuses a zero budget, before any call (case=7) 1`] = `
+"✋ ConstraintError: invalid effort for openrouter/deepseek/flash: tokens must be a positive integer
+  got: effort = {"budget":{"tokens":0}}
+
+valid shapes, one of:
+  - effort: 'minimal' | 'low' | 'medium' | 'high'   (≡ { level: … })
+  - effort: { budget: { tokens: N } }   N a positive integer
+
+{
+  "effort": {
+    "budget": {
+      "tokens": 0
+    }
+  },
+  "slug": "openrouter/deepseek/flash"
+}"
+`;
+
+exports[`asReasoningRequest refuses an empty object, before any call (case=7) 1`] = `
+"✋ ConstraintError: invalid effort for openrouter/deepseek/flash: neither level nor budget
+  got: effort = {}
+
+valid shapes, one of:
+  - effort: 'minimal' | 'low' | 'medium' | 'high'   (≡ { level: … })
+  - effort: { budget: { tokens: N } }   N a positive integer
+
+{
+  "effort": {},
+  "slug": "openrouter/deepseek/flash"
+}"
+`;
+
+exports[`asReasoningRequest refuses an unlisted level, none, before any call (case=7) 1`] = `
+"✋ ConstraintError: invalid effort for openrouter/deepseek/flash: level not in minimal | low | medium | high
+  got: effort = {"level":"none"}
+
+valid shapes, one of:
+  - effort: 'minimal' | 'low' | 'medium' | 'high'   (≡ { level: … })
+  - effort: { budget: { tokens: N } }   N a positive integer
+
+{
+  "effort": {
+    "level": "none"
+  },
+  "slug": "openrouter/deepseek/flash"
+}"
+`;
+
+exports[`asReasoningRequest refuses an unlisted level, xhigh, before any call (case=7) 1`] = `
+"✋ ConstraintError: invalid effort for openrouter/deepseek/flash: level not in minimal | low | medium | high
+  got: effort = 'xhigh'
+
+valid shapes, one of:
+  - effort: 'minimal' | 'low' | 'medium' | 'high'   (≡ { level: … })
+  - effort: { budget: { tokens: N } }   N a positive integer
+
+{
+  "effort": "xhigh",
+  "slug": "openrouter/deepseek/flash"
+}"
+`;
+
+exports[`asReasoningRequest refuses level and budget together (case=7 [t1]), before any call (case=7) 1`] = `
+"✋ ConstraintError: invalid effort for openrouter/deepseek/flash: both level and budget; openrouter takes one
+  got: effort = {"level":"low","budget":{"tokens":10}}
+
+valid shapes, one of:
+  - effort: 'minimal' | 'low' | 'medium' | 'high'   (≡ { level: … })
+  - effort: { budget: { tokens: N } }   N a positive integer
+
+{
+  "effort": {
+    "level": "low",
+    "budget": {
+      "tokens": 10
+    }
+  },
+  "slug": "openrouter/deepseek/flash"
+}"
+`;
+
+exports[`asReasoningRequest the refusal names every valid shape 1`] = `
+"✋ ConstraintError: invalid effort for openrouter/deepseek/flash: tokens must be a positive integer
+  got: effort = {"budget":{"tokens":0}}
+
+valid shapes, one of:
+  - effort: 'minimal' | 'low' | 'medium' | 'high'   (≡ { level: … })
+  - effort: { budget: { tokens: N } }   N a positive integer
+
+{
+  "effort": {
+    "budget": {
+      "tokens": 0
+    }
+  },
+  "slug": "openrouter/deepseek/flash"
+}"
+`;

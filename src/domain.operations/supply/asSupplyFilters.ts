@@ -1,5 +1,7 @@
 import { ConstraintError } from 'helpful-errors';
 
+import { SUPPLY_SORTS, type SupplySort } from '../../domain.objects/SupplySort';
+
 /**
  * .what = the supply promises a caller wrote in a slug's filter segment
  * .why = each word narrows which openrouter endpoints may serve the ask
@@ -13,6 +15,7 @@ export type SupplyFilters = {
   precision: SupplyPrecision | null;
   privacy: 'full' | null;
   priceMaxUsdPerMillion: number | null;
+  sort: SupplySort | null; // the order hosts are tried in; null = cheapest input first
 };
 
 export const SUPPLY_PRECISIONS = [
@@ -38,6 +41,7 @@ const FILTER_KEYS = [
   'precision',
   'privacy',
   'price.max',
+  'sort',
 ] as const;
 
 /**
@@ -45,10 +49,26 @@ const FILTER_KEYS = [
  * .why = a bare slug takes our walk, never openrouter's balancer: the cheapest
  *        endpoint that serves at ≥ 50 tokens/sec and retains no data
  *
- * .note = a slug that writes its own filters replaces these whole, never merges
+ * .note = a slug that writes its own promises replaces these whole; a segment of
+ *         `sort` alone is parsed after them, so it orders hosts within them
  */
 export const SUPPLY_FILTERS_DEFAULT_SEGMENT =
   'floor&speed=min50tps&privacy=full';
+
+/**
+ * .what = the filters of a segment that writes no word
+ * .why = the seed every parse starts from, and the one shape "no promise" is
+ *        compared to; a new field fails to compile here until it is named
+ */
+export const SUPPLY_FILTERS_NONE: SupplyFilters = {
+  floor: false,
+  speedMinTps: null,
+  region: null,
+  precision: null,
+  privacy: null,
+  priceMaxUsdPerMillion: null,
+  sort: null,
+};
 
 const VALID_WORDS = [
   'floor',
@@ -57,16 +77,21 @@ const VALID_WORDS = [
   `precision=${SUPPLY_PRECISIONS.join('|')}`,
   'privacy=full',
   'price.max={N}usd/M',
+  `sort=${SUPPLY_SORTS.join('|')}   (latency: only without floor)`,
 ];
 
 /**
  * .what = refuses one filter word with the valid set named
  * .why = a typo in a filter would bill a wrong host; name the fix
  */
-const failOnWord = (input: { word: string; why: string }): never => {
+const failOnWord = (
+  input: { word: string; why: string },
+  options?: { fix: string[] },
+): never => {
   throw new ConstraintError(
     [
       `invalid openrouter supply filter '${input.word}': ${input.why}`,
+      ...(options ? ['', ...options.fix] : []),
       '',
       `valid words, joined by '&' in any order:`,
       ...VALID_WORDS.map((word) => `  - ${word}`),
@@ -156,71 +181,81 @@ export const asSupplyFilters = (input: { segment: string }): SupplyFilters => {
     });
 
   // read each word onto its promise
-  const filters = words.reduce<SupplyFilters>(
-    (acc, word) => {
-      const { keyWritten, key, value, equalsCount } = asFilterWordParts({
-        word,
-      });
-      if (equalsCount > 1)
-        return failOnWord({ word, why: "more than one '='" });
+  const filters = words.reduce<SupplyFilters>((acc, word) => {
+    const { keyWritten, key, value, equalsCount } = asFilterWordParts({
+      word,
+    });
+    if (equalsCount > 1) return failOnWord({ word, why: "more than one '='" });
 
-      // a word this grammar does not know is named as such, never as a value gap
-      if (!FILTER_KEYS.some((known) => known === key))
-        return failOnWord({ word, why: 'unknown word' });
+    // a word this grammar does not know is named as such, never as a value gap
+    if (!FILTER_KEYS.some((known) => known === key))
+      return failOnWord({ word, why: 'unknown word' });
 
-      if (key === 'floor' && value === undefined)
-        return { ...acc, floor: true };
-      if (value === undefined || value === '')
-        return failOnWord({ word, why: 'absent value' });
+    if (key === 'floor' && value === undefined) return { ...acc, floor: true };
+    if (value === undefined || value === '')
+      return failOnWord({ word, why: 'absent value' });
 
-      if (keyWritten === 'speed')
-        return {
-          ...acc,
-          speedMinTps: asNumberBetween({
-            word,
-            value,
-            prefix: 'min',
-            suffix: 'tps',
-          }),
-        };
-      if (keyWritten === 'speed.min')
-        return {
-          ...acc,
-          speedMinTps: asNumberBetween({
-            word,
-            value,
-            prefix: '',
-            suffix: 'tps',
-          }),
-        };
-      if (key === 'region' && value === 'usa') return { ...acc, region: 'usa' };
-      if (key === 'privacy' && value === 'full')
-        return { ...acc, privacy: 'full' };
-      if (key === 'precision') {
-        const precision = SUPPLY_PRECISIONS.find((p) => p === value);
-        if (!precision) return failOnWord({ word, why: 'unknown precision' });
-        return { ...acc, precision };
-      }
-      if (key === 'price.max')
-        return {
-          ...acc,
-          priceMaxUsdPerMillion: asNumberBetween({
-            word,
-            value,
-            prefix: '',
-            suffix: 'usd/M',
-          }),
-        };
-      return failOnWord({ word, why: 'unknown word or value' });
-    },
-    {
-      floor: false,
-      speedMinTps: null,
-      region: null,
-      precision: null,
-      privacy: null,
-      priceMaxUsdPerMillion: null,
-    },
-  );
+    if (keyWritten === 'speed')
+      return {
+        ...acc,
+        speedMinTps: asNumberBetween({
+          word,
+          value,
+          prefix: 'min',
+          suffix: 'tps',
+        }),
+      };
+    if (keyWritten === 'speed.min')
+      return {
+        ...acc,
+        speedMinTps: asNumberBetween({
+          word,
+          value,
+          prefix: '',
+          suffix: 'tps',
+        }),
+      };
+    if (key === 'region' && value === 'usa') return { ...acc, region: 'usa' };
+    if (key === 'privacy' && value === 'full')
+      return { ...acc, privacy: 'full' };
+    if (key === 'precision') {
+      const precision = SUPPLY_PRECISIONS.find((p) => p === value);
+      if (!precision) return failOnWord({ word, why: 'unknown precision' });
+      return { ...acc, precision };
+    }
+    if (key === 'sort') {
+      const sort = SUPPLY_SORTS.find((s) => s === value);
+      if (!sort) return failOnWord({ word, why: 'unknown sort' });
+      return { ...acc, sort };
+    }
+    if (key === 'price.max')
+      return {
+        ...acc,
+        priceMaxUsdPerMillion: asNumberBetween({
+          word,
+          value,
+          prefix: '',
+          suffix: 'usd/M',
+        }),
+      };
+    return failOnWord({ word, why: 'unknown word or value' });
+  }, SUPPLY_FILTERS_NONE);
+
+  // the floor walk orders hosts itself, and reads no per-host latency figure yet
+  if (filters.floor && filters.sort === 'latency')
+    return failOnWord(
+      {
+        word: 'sort=latency',
+        why: 'the floor walk cannot order by latency',
+      },
+      {
+        fix: [
+          'fix: let openrouter order by latency, with no floor —',
+          '  …/privacy=full&sort=latency   (a sort word alone keeps the default floor, so name a filter word)',
+          'or keep the floor, ordered by throughput —',
+          '  …/floor&sort=throughput',
+        ],
+      },
+    );
   return filters;
 };

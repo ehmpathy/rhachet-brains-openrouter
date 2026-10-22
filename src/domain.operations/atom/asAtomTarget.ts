@@ -7,6 +7,7 @@ import {
   SUPPLY_FILTERS_DEFAULT_SEGMENT,
   type SupplyFilters,
 } from '../supply/asSupplyFilters';
+import { isSortOnlyFilters } from '../supply/isSortOnlyFilters';
 import {
   type BrainAtomSlugOpenRouterBare,
   TIER_BY_BARE_SLUG,
@@ -36,17 +37,25 @@ export const asAtomTarget = (input: {
   model: string | null; // the unlisted id; null for a tier, read at ask
   spec: BrainSpec;
   description: string;
-  filters: SupplyFilters; // the slug's own, else the default supply filters
+  filters: SupplyFilters; // the slug's own, else the default; a sort word alone adds its order to the default
   filterSuffix: string; // the slug's own filter segment, with its slash, or ''
 } => {
   // split off the supply filters; a malformed filter is refused here
   const parts = asSlugParts({ slug: input.slug });
   const { base, filterSuffix } = parts;
 
-  // a slug with no filters of its own takes the default supply filters
-  const filters =
-    parts.filters ??
-    asSupplyFilters({ segment: SUPPLY_FILTERS_DEFAULT_SEGMENT });
+  // a slug with no promises of its own takes the default supply filters; a sort word
+  // alone is parsed after them, so it orders hosts within them and meets their checks
+  // (a latency sort under the default's floor is refused, as if written out)
+  const filters = !parts.filters
+    ? asSupplyFilters({ segment: SUPPLY_FILTERS_DEFAULT_SEGMENT })
+    : isSortOnlyFilters({ filters: parts.filters })
+      ? asSupplyFilters({
+          segment: [SUPPLY_FILTERS_DEFAULT_SEGMENT, filterSuffix.slice(1)].join(
+            '&',
+          ),
+        })
+      : parts.filters;
 
   // a tier name reaches the newest model of its line, read at ask
   const tier = getAllAtomSlugs().find((slug) => slug === base);

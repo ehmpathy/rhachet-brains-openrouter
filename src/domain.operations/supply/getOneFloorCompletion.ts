@@ -1,3 +1,4 @@
+import type { IsoDuration } from 'iso-time';
 import type OpenAI from 'openai';
 
 import type { FloorAttempt } from '../../domain.objects/FloorAttempt';
@@ -7,27 +8,62 @@ import { asRetryAfter } from './asRetryAfter';
 import type { SupplyFilters } from './asSupplyFilters';
 import { getOneCompletionFromEndpoint } from './getOneCompletionFromEndpoint';
 import { getOneFloorExhaustedError } from './getOneFloorExhaustedError';
-import { isReplyFailed } from './isReplyFailed';
-import { isReplyJsonIgnored } from './isReplyJsonIgnored';
+import { getOneStallCount } from './getOneStallCount';
 import type { SdkOpenRouterEndpoints } from './sdkOpenRouterEndpoints';
+import { setHostFaultNoted } from './setHostFaultNoted';
 
 type ChatRequest = OpenAI.ChatCompletionCreateParamsNonStreaming; // .note = the openai sdk's own type name
 
 /**
- * .what = walks the qualified endpoints cheapest-first, one admitted alone per hop
- * .why = `floor` must land on the cheapest endpoint that serves now; a host
- *        fault (`asHostFault`) or a reply the host failed mid-way steps to the
- *        next, never to a pricier host openrouter picks
+ * .what = the most stalled hosts one floor walk waits out before it stops
+ * .why = each stall costs a full per-hop bound; with no cap, a walk over N stalled
+ *        hosts holds the caller N bounds. two stalls signal trouble beyond
+ *        one host, so the walk stops there and names the hosts it left untried
+ */
+const STALLS_PER_WALK_MAX = 2;
+
+/**
+ * .what = one hop's outcome: the reply or the error, plus the host fault it shows
+ * .why = the walk branches on one verdict (asHostFault), whichever way the call
+ *        settled; this folds both ways into that one shape
+ */
+const getOneHopVerdict = async (input: {
+  call: Promise<OpenAI.ChatCompletion>;
+  expectsJson: boolean;
+}): Promise<
+  | {
+      response: OpenAI.ChatCompletion;
+      error: null;
+      fault: ReturnType<typeof asHostFault>;
+    }
+  | { response: null; error: unknown; fault: ReturnType<typeof asHostFault> }
+> =>
+  input.call.then(
+    (response) => ({
+      response,
+      error: null,
+      fault: asHostFault({ response, expectsJson: input.expectsJson }),
+    }),
+    (error: unknown) => ({
+      response: null,
+      error,
+      fault: asHostFault({ error }),
+    }),
+  );
+
+/**
+ * .what = walks the qualified endpoints in queue order, one admitted alone per hop
+ * .why = `floor` must land on the first qualified endpoint that serves now; each host
+ *        fault `asHostFault` names (throttle, refusal, a marked 400, 502/503/504, a
+ *        failed reply, prose or 0 chars where json was owed, cut body, stall) steps to
+ *        the next in queue order, never to a host openrouter picks
  *
- * .note = a refusal proves the cached endpoint list stale, so the model's entry
- *         is dropped; the next ask reads it live (case=21)
- * .note = a failed reply drops no cache entry: the host is listed and healthy by
- *         openrouter's own read, it only failed this ask (F26)
- * .note = a prose reply where json was owed IS recorded, for 7 days, machine
- *         wide: the host claims the schema and broke it, so every later json ask
- *         skips it rather than pay to learn it again
- * .note = the prose check precedes the failed-reply check: both read a whole
- *         reply, and only a whole reply with `finish_reason: 'stop'` is prose
+ * .note = the queue order is the slug's: cheapest input first, or fastest first under
+ *         `sort=throughput` (getAllQualifiedEndpoints)
+ * .note = what each fault proves about the cache is `setHostFaultNoted`'s call
+ * .note = a reply cut at the output limit is no host fault, so it never steps:
+ *         another host would spend the same thought again
+ * .note = the serve itself is recorded by the caller, once for both supply modes
  */
 export const getOneFloorCompletion = async (
   input: {
@@ -39,6 +75,7 @@ export const getOneFloorCompletion = async (
     attempts: FloorAttempt[];
     retryAfter: string | null; // the latest throttle's `retry-after`, seconds
     faultLast: Error | null; // the last step's own error, for the refusal; null when the last host threw none
+    bound: IsoDuration; // each hop's bound, body included
   },
   context: {
     openai: OpenAI;
@@ -50,77 +87,56 @@ export const getOneFloorCompletion = async (
 ): Promise<{
   response: OpenAI.ChatCompletion;
   admitted: OpenRouterEndpoint[]; // the one endpoint that served, admitted alone
-  attempts: FloorAttempt[]; // each endpoint stepped past; the serve is the caller's to record
+  attempts: FloorAttempt[];
 }> => {
   // every qualified endpoint was tried and none served
   const [endpoint, ...rest] = input.queue;
-  if (!endpoint) throw getOneFloorExhaustedError(input);
+  if (!endpoint) throw getOneFloorExhaustedError({ ...input, untried: 0 });
 
-  // admit this endpoint alone, with no fallback
-  try {
-    const response = await getOneCompletionFromEndpoint(
-      { request: input.request, filters: input.filters, endpoint },
-      context,
-    );
+  // enough hosts stalled to signal trouble beyond one host: stop, name the rest
+  if (getOneStallCount({ attempts: input.attempts }) >= STALLS_PER_WALK_MAX)
+    throw getOneFloorExhaustedError({ ...input, untried: input.queue.length });
 
-    // a host that answered prose where json was owed broke the schema promise:
-    // record it for a week on this machine, then step to the next
-    if (isReplyJsonIgnored({ response, expectsJson: input.expectsJson })) {
-      await context.sdkOpenRouterEndpoints.setJsonIgnoredTag({
-        model: input.model,
-        tag: endpoint.tag,
-      });
-      return getOneFloorCompletion(
-        {
-          ...input,
-          queue: rest,
-          attempts: [
-            ...input.attempts,
-            { tag: endpoint.tag, outcome: 'prose' },
-          ],
-          faultLast: null, // this host threw no error; an earlier host's is not the last
-        },
-        context,
-      );
-    }
-
-    // a host that failed mid-reply did not serve: step to the next
-    if (isReplyFailed({ response }))
-      return getOneFloorCompletion(
-        {
-          ...input,
-          queue: rest,
-          attempts: [
-            ...input.attempts,
-            { tag: endpoint.tag, outcome: 'failed' },
-          ],
-          faultLast: null, // this host threw no error; an earlier host's is not the last
-        },
-        context,
-      );
-
-    // the serve itself is recorded by the caller, once for both supply modes
-    return { response, admitted: [endpoint], attempts: input.attempts };
-  } catch (error) {
-    // a failure that is not the host's is the caller's to see, untouched
-    const fault = asHostFault({ error });
-    if (!fault) throw error;
-
-    // a refusal proves the cached list stale: drop it, then step
-    if (fault.outcome === 'refused')
-      await context.sdkOpenRouterEndpoints.delForModel({ model: input.model });
-    return getOneFloorCompletion(
+  // admit this endpoint alone, with no fallback; read the host's verdict
+  const hop = await getOneHopVerdict({
+    call: getOneCompletionFromEndpoint(
       {
-        ...input,
-        queue: rest,
-        attempts: [
-          ...input.attempts,
-          { tag: endpoint.tag, outcome: fault.outcome },
-        ],
-        retryAfter: asRetryAfter({ error }) ?? input.retryAfter,
-        faultLast: error instanceof Error ? error : input.faultLast,
+        request: input.request,
+        filters: input.filters,
+        endpoint,
+        bound: input.bound,
       },
       context,
-    );
-  }
+    ),
+    expectsJson: input.expectsJson,
+  });
+
+  // the host served, or failed in a way the walk cannot step past: the caller's, untouched
+  const { fault } = hop;
+  if (fault === null && hop.response !== null)
+    return {
+      response: hop.response,
+      admitted: [endpoint],
+      attempts: input.attempts,
+    };
+  if (fault === null) throw hop.error;
+
+  // the host faulted: note what the fault proves, then step to the next
+  await setHostFaultNoted(
+    { fault: fault.outcome, model: input.model, tag: endpoint.tag },
+    context,
+  );
+  return getOneFloorCompletion(
+    {
+      ...input,
+      queue: rest,
+      attempts: [
+        ...input.attempts,
+        { tag: endpoint.tag, outcome: fault.outcome },
+      ],
+      retryAfter: asRetryAfter({ error: hop.error }) ?? input.retryAfter,
+      faultLast: hop.error instanceof Error ? hop.error : null, // a reply fault threw no error; an earlier host's is not the last
+    },
+    context,
+  );
 };

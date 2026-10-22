@@ -3,6 +3,7 @@ import OpenAI from 'openai';
 import type { ContextBrainSupplier } from 'rhachet';
 import {
   BrainAtom,
+  type BrainEffort,
   type BrainEpisode,
   BrainOutput,
   BrainOutputMetrics,
@@ -32,6 +33,7 @@ import { asAtomTarget } from './asAtomTarget';
 import { asBrainSizeForAsk } from './asBrainSizeForAsk';
 import { asCashWithSupplyTotal } from './asCashWithSupplyTotal';
 import { asPromptText } from './asPromptText';
+import { asReasoningRequest } from './asReasoningRequest';
 import type { BrainSuppliesOpenRouter } from './BrainAtom.config';
 import { getOneAskErrorNamed } from './getOneAskErrorNamed';
 import { getOneCatalogModel } from './getOneCatalogModel';
@@ -110,11 +112,14 @@ export const genBrainAtom = (input: {
      * .note = outputs are non-deterministic (llm inference)
      * .note = supports continuation via `on.episode`
      * .note = supports tool use via `plugs.tools`
+     * .note = supports a thought cap via `effort` (ehmpathy/rhachet#595): a level, or a
+     *         token budget, forwarded as openrouter's `reasoning`
      */
     ask: async <TOutput, TPlugs extends BrainPlugs = BrainPlugs>(
       askInput: {
         on?: { episode: BrainEpisode };
         plugs?: TPlugs;
+        effort?: BrainEffort;
         role: { briefs?: Artifact<typeof GitFile>[] };
         prompt: string | BrainPlugToolExecution[];
         schema: { output: z.Schema<TOutput> };
@@ -123,6 +128,12 @@ export const genBrainAtom = (input: {
     ): Promise<BrainOutput<TOutput, 'atom', TPlugs>> => {
       // track start time for elapsed duration
       const startedAt = Date.now();
+
+      // cast the thought cap first: a malformed one is refused before any spend
+      const reasoning = asReasoningRequest({
+        effort: askInput.effort ?? null,
+        slug: input.slug,
+      });
 
       // compose system prompt from briefs
       const systemPrompt = askInput.role.briefs
@@ -143,6 +154,8 @@ export const genBrainAtom = (input: {
         creds: supplier.creds,
         keys: ['OPENROUTER_API_KEY'],
       });
+      // .note = each call sets its own timer past the hop bound
+      //         (getOneCompletionWithinBound), so the client holds none
       const openai = new OpenAI({
         apiKey: creds.OPENROUTER_API_KEY,
         baseURL: 'https://openrouter.ai/api/v1',
@@ -206,7 +219,10 @@ export const genBrainAtom = (input: {
 
       // name what the ask needs of its endpoint: json, tools, or neither
       const { structuredOutput: wantStructuredOutput, paramsRequired } =
-        asAskNeeds({ hasTools: !!hasTools, isStringLike });
+        asAskNeeds({
+          hasTools: !!hasTools,
+          isStringLike,
+        });
 
       // .note = the catch NEVER swallows (`rule.forbid.failhide`). it recognizes
       //         two cases and names the fix for each: an account fault (402 no
@@ -222,6 +238,7 @@ export const genBrainAtom = (input: {
               filters: target.filters,
               paramsRequired,
               expectsJson: wantStructuredOutput,
+              reasoning,
               request: {
                 model,
                 messages,

@@ -1,6 +1,8 @@
 import { asIsoPrice, priceDivide } from 'iso-price';
 import { BrainSpec, type BrainSuppliesCreds } from 'rhachet/brains';
 
+import { EFFORT_SUPPORTED_OPENROUTER } from './EFFORT_SUPPORTED_OPENROUTER';
+
 /**
  * .what = credential keys required by openrouter
  * .why = enables type-safe credential lookup via rhachet's BrainSuppliesCreds
@@ -37,6 +39,7 @@ export type BrainSuppliesOpenRouter = {
  */
 export const SPEC_ESTIMATE_BY_TIER: Record<'pro' | 'flash', BrainSpec> = {
   pro: new BrainSpec({
+    supports: { effort: EFFORT_SUPPORTED_OPENROUTER },
     cost: {
       time: {
         speed: { tokens: 50, per: { seconds: 1 } },
@@ -61,6 +64,7 @@ export const SPEC_ESTIMATE_BY_TIER: Record<'pro' | 'flash', BrainSpec> = {
     },
   }),
   flash: new BrainSpec({
+    supports: { effort: EFFORT_SUPPORTED_OPENROUTER },
     cost: {
       time: {
         speed: { tokens: 50, per: { seconds: 1 } },

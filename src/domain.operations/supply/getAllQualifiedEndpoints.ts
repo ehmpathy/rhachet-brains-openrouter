@@ -1,7 +1,7 @@
-import { ConstraintError } from 'helpful-errors';
-
 import type { OpenRouterEndpoint } from '../../domain.objects/OpenRouterEndpoint';
+import type { SupplySort } from '../../domain.objects/SupplySort';
 import type { SupplyFilters } from './asSupplyFilters';
+import { getOneNoQualifiedEndpointError } from './getOneNoQualifiedEndpointError';
 
 /**
  * .what = is this endpoint tag in a usa region
@@ -36,12 +36,54 @@ const asSortableCost = (estUsd: number): number =>
   Number.isFinite(estUsd) ? estUsd : Number.POSITIVE_INFINITY;
 
 /**
- * .what = one promise, as a check an endpoint keeps or fails
- * .why = the same list drives the filter, the funnel, and each exclusion reason
+ * .what = one promise, as a check an endpoint keeps or fails, with the fix where it empties the set
+ * .why = the same list drives the filter, the funnel, each exclusion reason, and the
+ *        refusal's fix line, so a fix can never drift from the step it names
  */
 type PromiseCheck = {
   promise: string;
   keep: (endpoint: OpenRouterEndpoint) => boolean;
+  fix: string;
+};
+
+// the fix where no host survives a filter word of the slug
+const FIX_FILTER = 'fix: drop or loosen the promise where the count reaches 0';
+
+/**
+ * .what = the fix line where no host lists one param the ask needs
+ * .why = a schema param is fixed in the ask (a z.string() reply), a reasoning param by
+ *        a drop of the effort, any other param by a drop of that param
+ */
+const asParamFix = (input: { param: string }): string => {
+  if (input.param === 'response_format' || input.param === 'structured_outputs')
+    return 'fix: no endpoint honors a json schema. ask for a z.string() reply, or choose another model';
+  if (input.param === 'reasoning')
+    return 'fix: no endpoint supports(reasoning). drop the effort from the ask, or choose a model whose hosts list reasoning';
+  return `fix: no endpoint supports(${input.param}). drop that param from the ask, or choose another model`;
+};
+
+/**
+ * .what = the fix line where a thought budget fills every host's output limit
+ * .why = the fix must name the number to go below, never leave the caller to guess it
+ *
+ * .note = the number comes from the hosts that list every param the ask needs: the thought
+ *         step runs after the param steps, so a host that lacks a param could never serve
+ */
+const asThoughtBudgetFix = (input: {
+  endpoints: OpenRouterEndpoint[];
+  paramsRequired: string[];
+}): string => {
+  const limits = input.endpoints
+    .filter((endpoint) =>
+      input.paramsRequired.every((param) =>
+        endpoint.supportedParameters.includes(param),
+      ),
+    )
+    .map((endpoint) => endpoint.maxCompletionTokens)
+    .filter((limit): limit is number => limit !== null);
+  if (limits.length === 0)
+    return "fix: lower effort.budget.tokens below the hosts' output limit, so the answer has room";
+  return `fix: lower effort.budget.tokens below ${Math.max(...limits).toLocaleString('en-US')}, the largest output limit a host lists, so the answer has room`;
 };
 
 /**
@@ -49,25 +91,38 @@ type PromiseCheck = {
  * .why = each filter word becomes one named check, in a fixed order
  */
 const getAllPromiseChecks = (input: {
+  endpoints: OpenRouterEndpoint[];
   filters: SupplyFilters;
   paramsRequired: string[];
   tagsJsonIgnored: string[];
+  tokensThoughtBudget: number | null;
 }): PromiseCheck[] => {
   const { filters } = input;
+  // .note = one check per param, so the step that empties the funnel names the one param no host lists
   const checks: (PromiseCheck | null)[] = [
-    input.paramsRequired.length
+    ...input.paramsRequired.map((param) => ({
+      promise: `supports(${param})`,
+      keep: (e: OpenRouterEndpoint) => e.supportedParameters.includes(param),
+      fix: asParamFix({ param }),
+    })),
+    input.tokensThoughtBudget !== null
       ? {
-          promise: `supports(${input.paramsRequired.join(',')})`,
+          // .why = a budget at or past the host's output limit leaves no room to answer (q6)
+          promise: `thought<output.max (budget ${input.tokensThoughtBudget.toLocaleString('en-US')} tokens)`,
           keep: (e) =>
-            input.paramsRequired.every((p) =>
-              e.supportedParameters.includes(p),
-            ),
+            e.maxCompletionTokens === null ||
+            (input.tokensThoughtBudget ?? 0) < e.maxCompletionTokens,
+          fix: asThoughtBudgetFix({
+            endpoints: input.endpoints,
+            paramsRequired: input.paramsRequired,
+          }),
         }
       : null,
     input.tagsJsonIgnored.length
       ? {
-          promise: 'honors(json) — not seen in prose, 7d',
+          promise: 'honors(json) — no prose or 0-char reply seen, 7d',
           keep: (e) => !input.tagsJsonIgnored.includes(e.tag),
+          fix: 'fix: every json-capable endpoint answered prose or 0 chars on this machine within 7 days. ask for a z.string() reply, or choose another model',
         }
       : null,
     filters.speedMinTps !== null
@@ -76,22 +131,29 @@ const getAllPromiseChecks = (input: {
           keep: (e) =>
             e.throughputTps !== null &&
             e.throughputTps >= (filters.speedMinTps ?? 0),
+          fix: FIX_FILTER,
         }
       : null,
     filters.precision !== null
       ? {
           promise: `precision=${filters.precision}`,
           keep: (e) => e.quantization === filters.precision,
+          fix: FIX_FILTER,
         }
       : null,
     filters.privacy === 'full'
       ? {
           promise: 'privacy=full (zdr list)',
           keep: (e) => e.zdr,
+          fix: FIX_FILTER,
         }
       : null,
     filters.region === 'usa'
-      ? { promise: 'region=usa', keep: (e) => isUsaTag({ tag: e.tag }) }
+      ? {
+          promise: 'region=usa',
+          keep: (e) => isUsaTag({ tag: e.tag }),
+          fix: FIX_FILTER,
+        }
       : null,
     filters.priceMaxUsdPerMillion !== null
       ? {
@@ -101,6 +163,7 @@ const getAllPromiseChecks = (input: {
               (filters.priceMaxUsdPerMillion ?? 0) &&
             e.priceCompletionUsdPerToken * 1e6 <=
               (filters.priceMaxUsdPerMillion ?? 0),
+          fix: FIX_FILTER,
         }
       : null,
   ];
@@ -116,6 +179,7 @@ const getAllRankedVerdicts = (input: {
   endpoints: OpenRouterEndpoint[];
   checks: PromiseCheck[];
   tokens: { input: number };
+  sort: SupplySort | null;
 }): { endpoint: OpenRouterEndpoint; estUsd: number; failed: string | null }[] =>
   input.endpoints
     .map((endpoint) => ({
@@ -124,11 +188,30 @@ const getAllRankedVerdicts = (input: {
       failed:
         input.checks.find((check) => !check.keep(endpoint))?.promise ?? null,
     }))
-    .sort(
-      (a, b) =>
-        asSortableCost(a.estUsd) - asSortableCost(b.estUsd) ||
-        (b.endpoint.throughputTps ?? 0) - (a.endpoint.throughputTps ?? 0),
-    );
+    .sort(asVerdictComparator({ sort: input.sort }));
+
+/**
+ * .what = the order verdicts rank in, per the slug's sort word
+ * .why = `sort=throughput` tries the fastest qualified host first; every other
+ *        sort, and none, keeps the floor's order: cheapest input first, then fastest
+ *
+ * .note = `latency` reaches here only without floor, where openrouter orders the
+ *         admitted set itself; the local rank then only shapes the report
+ *
+ * .note = binary `(a, b)` by necessity: it is the comparator `Array.prototype.sort` calls
+ */
+const asVerdictComparator =
+  (input: { sort: SupplySort | null }) =>
+  (
+    a: { endpoint: OpenRouterEndpoint; estUsd: number },
+    b: { endpoint: OpenRouterEndpoint; estUsd: number },
+  ): number => {
+    const byCost = asSortableCost(a.estUsd) - asSortableCost(b.estUsd);
+    const bySpeed =
+      (b.endpoint.throughputTps ?? 0) - (a.endpoint.throughputTps ?? 0);
+    if (input.sort === 'throughput') return bySpeed || byCost;
+    return byCost || bySpeed;
+  };
 
 /**
  * .what = how many endpoints survive each promise, applied in turn
@@ -154,37 +237,16 @@ const getAllFunnelSteps = (input: {
 };
 
 /**
- * .what = the fix line for an empty funnel, named for the step that emptied it
- * .why = a schema step is fixed in the ask (a z.string() reply), not the slug;
- *        a filter step is fixed in the slug
+ * .what = the fix line for an empty funnel: the fix of the check that emptied it
+ * .why = each check carries its own fix, so no label is parsed back into a cause
  */
 const getOneEmptyFunnelFix = (input: {
-  funnel: { promise: string; left: number }[];
+  checks: PromiseCheck[];
+  funnel: { left: number }[];
 }): string => {
-  const stepEmptied = input.funnel.find((f) => f.left === 0)?.promise ?? '';
-  if (stepEmptied.includes('response_format'))
-    return 'fix: no endpoint honors a json schema. ask for a z.string() reply, or choose another model';
-  if (stepEmptied.startsWith('honors(json)'))
-    return 'fix: every json-capable endpoint answered prose on this machine within 7 days. ask for a z.string() reply, or choose another model';
-  if (stepEmptied.startsWith('supports('))
-    return `fix: no endpoint ${stepEmptied}. drop that param from the ask, or choose another model`;
-  return 'fix: drop or loosen the promise where the count reaches 0';
-};
-
-/**
- * .what = one row of the refusal table: an endpoint, its input rate, the promise it fails
- * .why = case=4 owes the caller each endpoint and why it lost, cheapest first,
- *        so the cheapest rate on offer is the first row
- */
-const asVerdictRow = (input: {
-  endpoint: OpenRouterEndpoint;
-  failed: string | null;
-}): string => {
-  const ratePerMillion = input.endpoint.pricePromptUsdPerToken * 1e6;
-  const rate = Number.isFinite(ratePerMillion)
-    ? `$${Number(ratePerMillion.toPrecision(3))}/M`
-    : 'no rate';
-  return `  ${rate.padEnd(10)} ${input.endpoint.tag.padEnd(28)} ✗ ${input.failed}`;
+  // funnel row 0 is "all endpoints"; row n+1 is check n
+  const rowEmptied = input.funnel.findIndex((f) => f.left === 0);
+  return input.checks[rowEmptied - 1]?.fix ?? FIX_FILTER;
 };
 
 /**
@@ -202,6 +264,7 @@ export const getAllQualifiedEndpoints = (input: {
   paramsRequired: string[];
   tagsJsonIgnored: string[]; // hosts this machine saw answer prose where json was owed
   tokens: { input: number };
+  tokensThoughtBudget: number | null; // the ask's effort.budget.tokens; null = no budget
 }): {
   qualified: OpenRouterEndpoint[];
   funnel: { promise: string; left: number }[];
@@ -218,6 +281,7 @@ export const getAllQualifiedEndpoints = (input: {
     endpoints: input.endpoints,
     checks,
     tokens: input.tokens,
+    sort: input.filters.sort,
   });
   const funnel = getAllFunnelSteps({ endpoints: input.endpoints, checks });
   const qualified = verdicts
@@ -226,19 +290,13 @@ export const getAllQualifiedEndpoints = (input: {
 
   // refuse an empty set, with the step that emptied it
   if (qualified.length === 0)
-    throw new ConstraintError(
-      [
-        `no endpoint of ${input.model} keeps every promise. no call was sent.`,
-        '',
-        ...funnel.map((f) => `  ${String(f.left).padStart(3)} ← ${f.promise}`),
-        '',
-        'each endpoint, cheapest input rate first, and the promise it fails:',
-        ...verdicts.map(asVerdictRow),
-        '',
-        getOneEmptyFunnelFix({ funnel }),
-      ].join('\n'),
-      { model: input.model, filters: input.filters },
-    );
+    throw getOneNoQualifiedEndpointError({
+      model: input.model,
+      filters: input.filters,
+      funnel,
+      verdicts,
+      fix: getOneEmptyFunnelFix({ checks, funnel }),
+    });
 
   return { qualified, funnel, verdicts };
 };

@@ -25,6 +25,7 @@ const SCHEMA_ENDPOINTS_BODY = z.object({
         throughput_last_30m: z
           .union([z.number(), z.object({ p50: z.number().nullish() })])
           .nullish(),
+        max_completion_tokens: z.number().nullish(),
       }),
     ),
   }),
@@ -69,4 +70,5 @@ export const asOpenRouterEndpoints = (input: {
     pricePromptUsdPerToken: Number(raw.pricing.prompt),
     priceCompletionUsdPerToken: Number(raw.pricing.completion),
     throughputTps: asThroughputTps({ throughput: raw.throughput_last_30m }),
+    maxCompletionTokens: raw.max_completion_tokens ?? null,
   }));

@@ -59,14 +59,17 @@ const genEndpoint = (input: {
   tag: string;
   providerName: string;
   pricePerMillion: number;
+  tps?: number;
+  params?: string[];
 }): OpenRouterEndpoint => ({
   providerName: input.providerName,
   tag: input.tag,
   quantization: 'fp8',
-  supportedParameters: ['response_format', 'tools'],
+  supportedParameters: input.params ?? ['response_format', 'tools'],
   pricePromptUsdPerToken: input.pricePerMillion / 1e6,
   priceCompletionUsdPerToken: input.pricePerMillion / 1e6,
-  throughputTps: 90,
+  throughputTps: input.tps ?? 90,
+  maxCompletionTokens: null,
   zdr: true,
 });
 
@@ -79,11 +82,14 @@ const ENDPOINTS = [
  * .what = a fake sdk that serves a fixed endpoint list
  * .why = with the sdk injected, the filtered paths run with no network
  */
-const genSdkFake = (input?: { tagsJsonIgnored: string[] }) => {
+const genSdkFake = (input?: {
+  tagsJsonIgnored?: string[];
+  endpoints?: OpenRouterEndpoint[];
+}) => {
   const reads: string[][] = [];
   return {
     reads,
-    getAllForModel: async () => ENDPOINTS,
+    getAllForModel: async () => input?.endpoints ?? ENDPOINTS,
     delForModel: async () => undefined,
     getAllJsonIgnoredTags: async (query: { model: string; tags: string[] }) => {
       reads.push(query.tags);
@@ -113,6 +119,7 @@ describe('getOneSuppliedCompletion', () => {
         request: REQUEST,
         filters: asSupplyFilters({ segment: 'floor' }),
         paramsRequired: ['response_format'],
+        reasoning: null,
         expectsJson: true,
       },
       { openai, sdkOpenRouterEndpoints: sdk },
@@ -120,7 +127,7 @@ describe('getOneSuppliedCompletion', () => {
     expect(sdk.reads).toEqual([['cheap', 'dear']]);
     expect(requests[0]?.provider).toMatchObject({ only: ['dear'] });
     expect(result.supply.choice?.funnel.map((f) => f.promise)).toContain(
-      'honors(json) — not seen in prose, 7d',
+      'honors(json) — no prose or 0-char reply seen, 7d',
     );
   });
 
@@ -137,6 +144,7 @@ describe('getOneSuppliedCompletion', () => {
         request: REQUEST,
         filters: asSupplyFilters({ segment: 'floor' }),
         paramsRequired: [],
+        reasoning: null,
         expectsJson: false,
       },
       { openai, sdkOpenRouterEndpoints: sdk },
@@ -154,6 +162,7 @@ describe('getOneSuppliedCompletion', () => {
         request: REQUEST,
         filters: asSupplyFilters({ segment: 'privacy=full' }),
         paramsRequired: [],
+        reasoning: null,
         expectsJson: false,
       },
       { openai, sdkOpenRouterEndpoints: genSdkFake() },
@@ -183,6 +192,7 @@ describe('getOneSuppliedCompletion', () => {
         request: REQUEST,
         filters: asSupplyFilters({ segment: 'floor' }),
         paramsRequired: [],
+        reasoning: null,
         expectsJson: false,
       },
       { openai, sdkOpenRouterEndpoints: genSdkFake() },
@@ -215,6 +225,7 @@ describe('getOneSuppliedCompletion', () => {
           request: REQUEST,
           filters: thisCase.filters,
           paramsRequired: [],
+          reasoning: null,
           expectsJson: false,
         },
         { openai, sdkOpenRouterEndpoints: genSdkFake() },
@@ -260,6 +271,7 @@ describe('getOneSuppliedCompletion', () => {
             request: REQUEST,
             filters: asSupplyFilters({ segment: 'privacy=full' }),
             paramsRequired: ['response_format'],
+            reasoning: null,
             expectsJson: true,
           },
           { openai, sdkOpenRouterEndpoints: genSdkFake() },
@@ -268,6 +280,200 @@ describe('getOneSuppliedCompletion', () => {
       expect(error).toBeInstanceOf(MalfunctionError);
       expect(error.message).toContain(thisCase.expect.contains);
       expect(error.message).not.toContain('served from');
+    }),
+  );
+
+  // .why = case=2 [t1]: an all-thought reply on a floor walk is no host failure, so
+  //        the walk sends one call, never a second host to spend the same thought again
+  test('a floor walk that meets an all-thought reply sends one call, then names it', async () => {
+    const { openai, requests } = genOpenAiFake({
+      provider: 'Cheap',
+      finishReason: 'length',
+      content: '',
+    });
+    const error = await getError(
+      getOneSuppliedCompletion(
+        {
+          apiKey: 'fake',
+          model: REQUEST.model,
+          request: REQUEST,
+          filters: asSupplyFilters({ segment: 'floor' }),
+          paramsRequired: ['response_format'],
+          reasoning: null,
+          expectsJson: true,
+        },
+        { openai, sdkOpenRouterEndpoints: genSdkFake() },
+      ),
+    );
+    expect(requests).toHaveLength(1);
+    expect(error).toBeInstanceOf(MalfunctionError);
+    expect(error.message).toContain('spent the whole reply on thought');
+    expect(
+      error instanceof MalfunctionError ? error.metadata?.defect : null,
+    ).toEqual('all-thought');
+  });
+
+  // .why = case=3: under `sort=throughput` the floor walk admits the fastest qualified
+  //        host first, and openrouter is told the same sort
+  test('a floor walk under sort=throughput admits the fastest host first', async () => {
+    const { openai, requests } = genOpenAiFake({ provider: 'Quick' });
+    const result = await getOneSuppliedCompletion(
+      {
+        apiKey: 'fake',
+        model: REQUEST.model,
+        request: REQUEST,
+        filters: asSupplyFilters({ segment: 'floor&sort=throughput' }),
+        paramsRequired: [],
+        reasoning: null,
+        expectsJson: false,
+      },
+      {
+        openai,
+        sdkOpenRouterEndpoints: genSdkFake({
+          endpoints: [
+            genEndpoint({
+              tag: 'cheap',
+              providerName: 'Cheap',
+              pricePerMillion: 0.1,
+              tps: 40,
+            }),
+            genEndpoint({
+              tag: 'quick',
+              providerName: 'Quick',
+              pricePerMillion: 0.9,
+              tps: 200,
+            }),
+          ],
+        }),
+      },
+    );
+    expect(requests).toHaveLength(1);
+    expect(requests[0]?.provider).toMatchObject({
+      only: ['quick'],
+      sort: 'throughput',
+    });
+    expect(result.supply.attempts).toEqual([
+      { tag: 'quick', outcome: 'served' },
+    ]);
+  });
+
+  // .why = the cap arrives once: the supply adds it to the body and requires the
+  //        param itself, so no caller can pass a cap whose `supports(reasoning)` drops
+  test('a thought cap reaches the body and admits only a host that lists reasoning', async () => {
+    const { openai, requests } = genOpenAiFake({ provider: 'Dear' });
+    const result = await getOneSuppliedCompletion(
+      {
+        apiKey: 'fake',
+        model: REQUEST.model,
+        request: REQUEST,
+        filters: asSupplyFilters({ segment: 'floor' }),
+        paramsRequired: [],
+        reasoning: { max_tokens: 600 },
+        expectsJson: false,
+      },
+      {
+        openai,
+        sdkOpenRouterEndpoints: genSdkFake({
+          endpoints: [
+            genEndpoint({
+              tag: 'cheap',
+              providerName: 'Cheap',
+              pricePerMillion: 0.1,
+            }),
+            genEndpoint({
+              tag: 'dear',
+              providerName: 'Dear',
+              pricePerMillion: 0.9,
+              params: ['response_format', 'tools', 'reasoning'],
+            }),
+          ],
+        }),
+      },
+    );
+    expect(requests[0]?.reasoning).toEqual({ max_tokens: 600 });
+    expect(requests[0]?.provider).toMatchObject({ only: ['dear'] });
+    expect(result.supply.choice?.funnel.map((f) => f.promise)).toContain(
+      'supports(reasoning)',
+    );
+  });
+
+  test('no thought cap sends no reasoning key', async () => {
+    const { openai, requests } = genOpenAiFake({ provider: 'Cheap' });
+    await getOneSuppliedCompletion(
+      {
+        apiKey: 'fake',
+        model: REQUEST.model,
+        request: REQUEST,
+        filters: asSupplyFilters({ segment: 'floor' }),
+        paramsRequired: [],
+        reasoning: null,
+        expectsJson: false,
+      },
+      { openai, sdkOpenRouterEndpoints: genSdkFake() },
+    );
+    expect('reasoning' in (requests[0] ?? {})).toEqual(false);
+  });
+
+  // .why = "an unset ask sends the 0.1.3 body" is pinned whole, not by key absence alone;
+  //        one snap per option shows exactly what each adds
+  const TEST_CASES_BODY = [
+    { description: 'unset', segment: 'floor', reasoning: null },
+    {
+      description: 'a budget',
+      segment: 'floor',
+      reasoning: { max_tokens: 600 },
+    },
+    { description: 'a level', segment: 'floor', reasoning: { effort: 'low' } },
+    {
+      description: 'a sort',
+      segment: 'floor&sort=throughput',
+      reasoning: null,
+    },
+    {
+      description: 'a sort by price',
+      segment: 'floor&sort=price',
+      reasoning: null,
+    },
+    {
+      description: 'a sort by throughput, no floor (fallbacks inside only)',
+      segment: 'privacy=full&sort=throughput',
+      reasoning: null,
+    },
+    {
+      description: 'a sort by latency, no floor (fallbacks inside only)',
+      segment: 'privacy=full&sort=latency',
+      reasoning: null,
+    },
+  ];
+  TEST_CASES_BODY.map((thisCase) =>
+    test(`the request body for ${thisCase.description} matches snapshot`, async () => {
+      const { openai, requests } = genOpenAiFake({ provider: 'Cheap' });
+      await getOneSuppliedCompletion(
+        {
+          apiKey: 'fake',
+          model: REQUEST.model,
+          request: REQUEST,
+          filters: asSupplyFilters({ segment: thisCase.segment }),
+          paramsRequired: [],
+          reasoning: thisCase.reasoning,
+          expectsJson: false,
+        },
+        {
+          openai,
+          sdkOpenRouterEndpoints: genSdkFake({
+            endpoints: [
+              genEndpoint({
+                tag: 'cheap',
+                providerName: 'Cheap',
+                pricePerMillion: 0.1,
+                params: ['response_format', 'tools', 'reasoning'],
+              }),
+            ],
+          }),
+        },
+      );
+      expect(requests).toHaveLength(1);
+      expect(requests[0]).toMatchSnapshot();
     }),
   );
 });
@@ -358,6 +564,7 @@ describe('getOneSuppliedCompletion, a host fault on the admitted set (#21)', () 
             filters: asSupplyFilters({ segment: 'privacy=full' }),
             paramsRequired: [],
             expectsJson: false,
+            reasoning: null,
           },
           { openai, sdkOpenRouterEndpoints: genSdkFake() },
         );
@@ -410,6 +617,7 @@ describe('getOneSuppliedCompletion, a host fault on the admitted set (#21)', () 
               filters: asSupplyFilters({ segment: 'floor' }),
               paramsRequired: [],
               expectsJson: false,
+              reasoning: null,
             },
             { openai, sdkOpenRouterEndpoints: genSdkFake() },
           );
@@ -484,6 +692,7 @@ describe('getOneSuppliedCompletion, a host fault on the admitted set (#21)', () 
               filters: asSupplyFilters({ segment: 'floor' }),
               paramsRequired: thisCase.expectsJson ? ['response_format'] : [],
               expectsJson: thisCase.expectsJson,
+              reasoning: null,
             },
             { openai, sdkOpenRouterEndpoints: genSdkFake() },
           );
@@ -538,6 +747,7 @@ describe('getOneSuppliedCompletion, a host fault on the admitted set (#21)', () 
                 filters: asSupplyFilters({ segment: 'privacy=full' }),
                 paramsRequired: [],
                 expectsJson: false,
+                reasoning: null,
               },
               { openai, sdkOpenRouterEndpoints: genSdkFake() },
             ),

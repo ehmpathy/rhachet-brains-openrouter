@@ -9,6 +9,7 @@ const genEndpoint = (input: { tag: string }): OpenRouterEndpoint => ({
   pricePromptUsdPerToken: 0.00000003,
   priceCompletionUsdPerToken: 0.0000005,
   throughputTps: 120,
+  maxCompletionTokens: null,
   zdr: true,
 });
 

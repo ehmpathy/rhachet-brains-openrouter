@@ -1,0 +1,88 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`getOneFloorCompletion.socket.integration given: [case2] a floor of only stalled hosts when: [t0] the walk runs over real sockets then: it stops after two stalls, and names the bound 1`] = `
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: the walk stopped after 2 stalled hosts, with 1 untried. no answer was returned.
+
+  stalled   stall
+  stalled   stall
+
+fix: retry later; 1 qualified host was left untried, so a looser promise would not help.
+a stalled host sent no whole reply inside 300ms. the bound ends a dead host;
+if answers are slow rather than dead, cap thought (effort on the ask), never a longer bound.
+
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "attempts": [
+    {
+      "tag": "stall",
+      "outcome": "stalled"
+    },
+    {
+      "tag": "stall",
+      "outcome": "stalled"
+    }
+  ],
+  "retryAfter": null,
+  "faultReasonLast": null,
+  "untried": 1,
+  "bound": {
+    "milliseconds": 300
+  }
+}"
+`;
+
+exports[`getOneFloorCompletion.socket.integration given: [case3] a supplied ask whose host spends its whole reply on thought when: [t0] the ask runs over a real socket then: it ends in the all-thought error, by name, after one call 1`] = `
+"💥 MalfunctionError: openrouter's host spent the whole reply on thought, and wrote no answer (200 of 200 output tokens were thought; finish_reason=length; 0 chars of answer).
+
+fix: budget thought below the output room, so the answer has space —
+  atom.ask({ ...input, effort: { budget: { tokens: N } } })
+audit: https://openrouter.ai/activity — generation gen-socket-test, provider allthought
+
+{
+  "defect": "all-thought",
+  "finishReason": "length",
+  "provider": "allthought",
+  "generationId": "gen-socket-test",
+  "contentLength": 0,
+  "tokensOutput": 200,
+  "tokensThought": 200,
+  "tokensThoughtBudget": null,
+  "thoughtLevel": null,
+  "errorMessage": null,
+  "costUsd": null
+}"
+`;
+
+exports[`getOneFloorCompletion.socket.integration given: [case5] a no-floor ask whose admitted host cuts its body when: [t0] the ask runs over a real socket then: it ends in a HostFaultError that names the fault and the host 1`] = `
+"💥 HostFaultError: openrouter's host ended its reply body mid-json; no reply could be read
+
+fix: add 'floor' to the slug's filters, so the walk steps past a faulted host, or retry
+
+{
+  "fault": "body-cut",
+  "tags": [
+    "cut"
+  ],
+  "bound": {
+    "milliseconds": 300
+  },
+  "hint": "a transport fault on one host; another host may serve"
+}"
+`;
+
+exports[`getOneFloorCompletion.socket.integration given: [case6] a no-floor ask whose admitted host stalls its body when: [t0] the ask runs over a real socket then: it ends in a HostFaultError that names the fault and the host 1`] = `
+"💥 HostFaultError: openrouter's host sent no whole reply inside 300ms
+
+fix: add 'floor' to the slug's filters, so the walk steps past a dead host; if answers are slow rather than dead, cap thought (effort on the ask)
+
+{
+  "fault": "stalled",
+  "tags": [
+    "stall"
+  ],
+  "bound": {
+    "milliseconds": 300
+  },
+  "hint": "a dead host is bounded here; a slow answer is bounded by a thought cap (effort on the ask)"
+}"
+`;

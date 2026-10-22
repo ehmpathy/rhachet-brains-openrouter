@@ -117,7 +117,7 @@ exports[`getOneAdmittedSetCompletion given: [case4] three different faults, then
 `;
 
 exports[`getOneAdmittedSetCompletion given: [case5] every host faults when: [t0] the set is sent then: the message matches snapshot 1`] = `
-"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), or answered prose where json was owed. no answer was returned.
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), cut its body, stalled, or answered prose or 0 chars where json was owed. no answer was returned.
 
   throttled A
   failed    B
@@ -142,7 +142,11 @@ fix: retry after 7s (openrouter's retry-after), or loosen a promise so more endp
     }
   ],
   "retryAfter": "7",
-  "faultReasonLast": null
+  "faultReasonLast": null,
+  "untried": 0,
+  "bound": {
+    "milliseconds": 50
+  }
 }"
 `;
 
@@ -209,7 +213,7 @@ exports[`getOneAdmittedSetCompletion given: [case9] a host fault that names a ho
 `;
 
 exports[`getOneAdmittedSetCompletion given: [case10] a throttle names a wait, then a later host fault names none when: [t0] the set is sent and every host faults then: the message the caller sees matches snapshot 1`] = `
-"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), or answered prose where json was owed. no answer was returned.
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), cut its body, stalled, or answered prose or 0 chars where json was owed. no answer was returned.
 
   throttled A
   failed    B
@@ -229,12 +233,16 @@ fix: retry after 7s (openrouter's retry-after), or loosen a promise so more endp
     }
   ],
   "retryAfter": "7",
-  "faultReasonLast": null
+  "faultReasonLast": null,
+  "untried": 0,
+  "bound": {
+    "milliseconds": 50
+  }
 }"
 `;
 
 exports[`getOneAdmittedSetCompletion given: [case11] every host throttles, each with its own reason when: [t0] the set is sent then: the message the caller sees matches snapshot 1`] = `
-"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), or answered prose where json was owed. no answer was returned.
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), cut its body, stalled, or answered prose or 0 chars where json was owed. no answer was returned.
 
   throttled A
   throttled B
@@ -256,7 +264,11 @@ fix: retry after 7s (openrouter's retry-after), or loosen a promise so more endp
     }
   ],
   "retryAfter": "7",
-  "faultReasonLast": "rate limited upstream"
+  "faultReasonLast": "rate limited upstream",
+  "untried": 0,
+  "bound": {
+    "milliseconds": 50
+  }
 }"
 `;
 
@@ -288,7 +300,7 @@ exports[`getOneAdmittedSetCompletion given: [case12] a host fault, marked, that 
 `;
 
 exports[`getOneAdmittedSetCompletion given: [case12] a host fault, marked, that names no host when: [t1] every send answers a marked 429 with no name then: the message the caller sees matches snapshot 1`] = `
-"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), or answered prose where json was owed. no answer was returned.
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), cut its body, stalled, or answered prose or 0 chars where json was owed. no answer was returned.
 
   throttled A
   throttled B
@@ -310,6 +322,70 @@ fix: retry after 7s (openrouter's retry-after), or loosen a promise so more endp
     }
   ],
   "retryAfter": "7",
-  "faultReasonLast": "rate limited upstream"
+  "faultReasonLast": "rate limited upstream",
+  "untried": 0,
+  "bound": {
+    "milliseconds": 50
+  }
 }"
+`;
+
+exports[`getOneAdmittedSetCompletion given: [case13] the admitted set cuts its reply body when: [t0] the set is sent then: the message the caller sees matches snapshot 1`] = `
+"💥 HostFaultError: openrouter's host ended its reply body mid-json; no reply could be read
+
+fix: add 'floor' to the slug's filters, so the walk steps past a faulted host, or retry
+
+{
+  "fault": "body-cut",
+  "tags": [
+    "A",
+    "B"
+  ],
+  "bound": {
+    "milliseconds": 50
+  },
+  "hint": "a transport fault on one host; another host may serve"
+}"
+`;
+
+exports[`getOneAdmittedSetCompletion given: [case14] the admitted set stalls past the bound when: [t0] the set is sent then: the message the caller sees matches snapshot 1`] = `
+"💥 HostFaultError: openrouter's host sent no whole reply inside 50ms
+
+fix: add 'floor' to the slug's filters, so the walk steps past a dead host; if answers are slow rather than dead, cap thought (effort on the ask)
+
+{
+  "fault": "stalled",
+  "tags": [
+    "A",
+    "B"
+  ],
+  "bound": {
+    "milliseconds": 50
+  },
+  "hint": "a dead host is bounded here; a slow answer is bounded by a thought cap (effort on the ask)"
+}"
+`;
+
+exports[`getOneAdmittedSetCompletion given: [case16] the host openrouter picks answers a named 502 when: [t0] the set is sent then: the sends and the trail match snapshot 1`] = `
+{
+  "admittedFinal": [
+    "B",
+  ],
+  "attempts": [
+    {
+      "outcome": "failed",
+      "tag": "A",
+    },
+  ],
+  "sends": [
+    [
+      "A",
+      "B",
+    ],
+    [
+      "B",
+    ],
+  ],
+  "servedId": "gen-B",
+}
 `;

@@ -17,8 +17,9 @@ const asUsdEstimateRounded = (input: { usd: number }): number =>
 
 /**
  * .what = the rows the report keeps: every endpoint up to the winner, and a few past it
- * .why = the cheaper losers are the ones a caller asks about; each names the
- *        promise it failed
+ * .why = the losers ranked ahead of the winner are the ones a caller asks about —
+ *        cheaper under the floor's order, faster under `sort=throughput`; each names
+ *        the promise it failed
  *
  * .note = a winner absent from the verdicts keeps the head of the list. this is a
  *         guard, unreachable today: the served endpoint comes from the qualified set,

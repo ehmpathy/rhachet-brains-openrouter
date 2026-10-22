@@ -10,6 +10,7 @@ valid words, joined by '&' in any order:
   - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
   - privacy=full
   - price.max={N}usd/M
+  - sort=price|throughput|latency   (latency: only without floor)
 
 {
   "word": "floor&"
@@ -26,6 +27,7 @@ valid words, joined by '&' in any order:
   - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
   - privacy=full
   - price.max={N}usd/M
+  - sort=price|throughput|latency   (latency: only without floor)
 
 {
   "word": "fast"
@@ -42,6 +44,7 @@ valid words, joined by '&' in any order:
   - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
   - privacy=full
   - price.max={N}usd/M
+  - sort=price|throughput|latency   (latency: only without floor)
 
 {
   "word": "cheap"

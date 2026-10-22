@@ -1,3 +1,4 @@
+import type { IsoDuration } from 'iso-time';
 import type OpenAI from 'openai';
 
 import type { FloorAttempt } from '../../domain.objects/FloorAttempt';
@@ -11,6 +12,7 @@ import { getOneCompletionFromEndpoints } from './getOneCompletionFromEndpoints';
 import { getOneFloorCompletion } from './getOneFloorCompletion';
 import { getOneFloorExhaustedError } from './getOneFloorExhaustedError';
 import type { SdkOpenRouterEndpoints } from './sdkOpenRouterEndpoints';
+import { setHostFaultNoted } from './setHostFaultNoted';
 
 type ChatRequest = OpenAI.ChatCompletionCreateParamsNonStreaming; // .note = the openai sdk's own type name
 
@@ -32,9 +34,11 @@ type ChatRequest = OpenAI.ChatCompletionCreateParamsNonStreaming; // .note = the
  *         `429 Rate limit exceeded` (its account limit), or a 404 for a
  *         withdrawn model. no other host can fix it, and a walk would only
  *         prolong the limit, so it rethrows untouched in one send (c9)
- * .note = side effect: a refusal (404) drops the model's cached endpoint list,
- *         named or not, before any hop, walk, or rethrow — the same idempotent
- *         cache drop the floor walk makes; the next read refetches it
+ * .note = a cut body or a stall marks no host, so it too rethrows untouched: no
+ *         name says which host to drop, and a walk would wait out a bound per host
+ * .note = side effect: what a fault proves about the cache (`setHostFaultNoted`) is
+ *         noted before any hop, walk, or rethrow — a refusal (404) drops the model's
+ *         cached endpoint list, named or not; the next read refetches it
  * .note = side effect, once walked: the walk is the floor walk's own, so a json
  *         ask that meets a prose reply there steps past it and records that host
  *         as json-ignored for 7 days, as a floor walk does (F31)
@@ -51,6 +55,7 @@ export const getOneAdmittedSetCompletion = async (
     attempts: FloorAttempt[];
     retryAfter: string | null; // the latest throttle's `retry-after`, seconds
     faultLast: Error | null; // the last host fault's own error, for the refusal
+    bound: IsoDuration; // each send's bound, body included
   },
   context: {
     openai: OpenAI;
@@ -71,6 +76,8 @@ export const getOneAdmittedSetCompletion = async (
       attempts: input.attempts,
       retryAfter: input.retryAfter,
       faultLast: input.faultLast,
+      untried: 0,
+      bound: input.bound,
     });
 
   // admit the whole set, with no fallback beyond it
@@ -80,6 +87,7 @@ export const getOneAdmittedSetCompletion = async (
         request: input.request,
         filters: input.filters,
         endpoints: input.qualified,
+        bound: input.bound,
       },
       context,
     );
@@ -98,12 +106,18 @@ export const getOneAdmittedSetCompletion = async (
     const retryAfter = asRetryAfter({ error }) ?? input.retryAfter;
     const faultLast = error instanceof Error ? error : input.faultLast;
 
-    // a refusal proves the cached list stale, named or not: drop it
-    if (fault.outcome === 'refused')
-      await context.sdkOpenRouterEndpoints.delForModel({ model: input.model });
+    // note what the fault proves about the cache, named or not
+    await setHostFaultNoted(
+      {
+        fault: fault.outcome,
+        model: input.model,
+        tag: endpointsFaulted[0]?.tag ?? null,
+      },
+      context,
+    );
 
-    // openrouter's own answer (its account limit, a withdrawn model) marks no
-    // host: no other host can fix it, so the caller sees it untouched (c9)
+    // openrouter's own answer (its account limit, a withdrawn model), or a
+    // transport fault, marks no host: the caller sees it untouched (c9)
     if (endpointsFaulted.length === 0 && !fault.isHostMarked) throw error;
 
     // a host's fault that names no admitted host: walk the set one per send
@@ -118,6 +132,7 @@ export const getOneAdmittedSetCompletion = async (
           attempts: input.attempts,
           retryAfter,
           faultLast,
+          bound: input.bound,
         },
         context,
       );

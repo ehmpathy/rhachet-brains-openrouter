@@ -1,5 +1,13 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
+exports[`rhachet-brains-openrouter.unit given: [case0] the package export surface when: [t0] the runtime exports are listed then: the export names match snapshot 1`] = `
+[
+  "HostFaultError",
+  "genBrainAtom",
+  "getBrainAtomsByOpenRouter",
+]
+`;
+
 exports[`rhachet-brains-openrouter.unit given: [case1] getBrainAtomsByOpenRouter when: [t0] called then: slugs match snapshot 1`] = `
 [
   "openrouter/deepseek/pro",
@@ -8,6 +16,7 @@ exports[`rhachet-brains-openrouter.unit given: [case1] getBrainAtomsByOpenRouter
   "openrouter/z-ai/pro",
   "openrouter/z-ai/flash",
   "openrouter/deepseek/flash/floor&speed=min50tps&privacy=full",
+  "openrouter/deepseek/flash/floor&speed=min50tps&privacy=full&sort=throughput",
 ]
 `;
 
@@ -51,6 +60,17 @@ exports[`rhachet-brains-openrouter.unit given: [case1] getBrainAtomsByOpenRouter
           "tooluse": true,
         },
       },
+      "supports": {
+        "effort": {
+          "budget": true,
+          "levels": [
+            "minimal",
+            "low",
+            "medium",
+            "high",
+          ],
+        },
+      },
     },
   },
   {
@@ -89,6 +109,17 @@ exports[`rhachet-brains-openrouter.unit given: [case1] getBrainAtomsByOpenRouter
         },
         "skills": {
           "tooluse": true,
+        },
+      },
+      "supports": {
+        "effort": {
+          "budget": true,
+          "levels": [
+            "minimal",
+            "low",
+            "medium",
+            "high",
+          ],
         },
       },
     },
@@ -131,6 +162,17 @@ exports[`rhachet-brains-openrouter.unit given: [case1] getBrainAtomsByOpenRouter
           "tooluse": true,
         },
       },
+      "supports": {
+        "effort": {
+          "budget": true,
+          "levels": [
+            "minimal",
+            "low",
+            "medium",
+            "high",
+          ],
+        },
+      },
     },
   },
   {
@@ -169,6 +211,17 @@ exports[`rhachet-brains-openrouter.unit given: [case1] getBrainAtomsByOpenRouter
         },
         "skills": {
           "tooluse": true,
+        },
+      },
+      "supports": {
+        "effort": {
+          "budget": true,
+          "levels": [
+            "minimal",
+            "low",
+            "medium",
+            "high",
+          ],
         },
       },
     },
@@ -211,6 +264,17 @@ exports[`rhachet-brains-openrouter.unit given: [case1] getBrainAtomsByOpenRouter
           "tooluse": true,
         },
       },
+      "supports": {
+        "effort": {
+          "budget": true,
+          "levels": [
+            "minimal",
+            "low",
+            "medium",
+            "high",
+          ],
+        },
+      },
     },
   },
   {
@@ -249,6 +313,68 @@ exports[`rhachet-brains-openrouter.unit given: [case1] getBrainAtomsByOpenRouter
         },
         "skills": {
           "tooluse": true,
+        },
+      },
+      "supports": {
+        "effort": {
+          "budget": true,
+          "levels": [
+            "minimal",
+            "low",
+            "medium",
+            "high",
+          ],
+        },
+      },
+    },
+  },
+  {
+    "slug": "openrouter/deepseek/flash/floor&speed=min50tps&privacy=full&sort=throughput",
+    "spec": BrainSpec {
+      "cost": {
+        "cash": {
+          "cache": {
+            "get": "USD 0.000_000_300",
+            "set": "USD 0.00",
+          },
+          "input": "USD 0.000_000_300",
+          "output": "USD 0.000_002_000",
+          "per": "token",
+        },
+        "time": {
+          "latency": {
+            "seconds": 0.6,
+          },
+          "speed": {
+            "per": {
+              "seconds": 1,
+            },
+            "tokens": 50,
+          },
+        },
+      },
+      "gain": {
+        "cutoff": "2026-10-02",
+        "domain": "ALL",
+        "grades": {},
+        "size": {
+          "context": {
+            "tokens": 1000000,
+          },
+        },
+        "skills": {
+          "tooluse": true,
+        },
+      },
+      "supports": {
+        "effort": {
+          "budget": true,
+          "levels": [
+            "minimal",
+            "low",
+            "medium",
+            "high",
+          ],
         },
       },
     },
@@ -291,6 +417,17 @@ BrainSpec {
     },
     "skills": {
       "tooluse": true,
+    },
+  },
+  "supports": {
+    "effort": {
+      "budget": true,
+      "levels": [
+        "minimal",
+        "low",
+        "medium",
+        "high",
+      ],
     },
   },
 }

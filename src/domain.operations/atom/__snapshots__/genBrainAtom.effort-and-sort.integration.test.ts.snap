@@ -1,0 +1,31 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`genBrainAtom.effort-and-sort.integration given: [case6] a small thought budget on a thought-heavy prompt, per tier when: [t0] openrouter/deepseek/flash is asked with effort: { budget: { tokens: 400 } } then: the logged draw, live values masked, matches snapshot 1`] = `
+{
+  "budget": 400,
+  "ignored": "(live draw)",
+  "provider": "(live host)",
+  "slug": "openrouter/deepseek/flash",
+  "tokensThought": "(live count)",
+}
+`;
+
+exports[`genBrainAtom.effort-and-sort.integration given: [case6] a small thought budget on a thought-heavy prompt, per tier when: [t1] openrouter/z-ai/flash is asked with effort: { budget: { tokens: 400 } } then: the logged draw, live values masked, matches snapshot 1`] = `
+{
+  "budget": 400,
+  "ignored": "(live draw)",
+  "provider": "(live host)",
+  "slug": "openrouter/z-ai/flash",
+  "tokensThought": "(live count)",
+}
+`;
+
+exports[`genBrainAtom.effort-and-sort.integration given: [case6] a small thought budget on a thought-heavy prompt, per tier when: [t2] openrouter/moonshotai/pro is asked with effort: { budget: { tokens: 400 } } then: the logged draw, live values masked, matches snapshot 1`] = `
+{
+  "budget": 400,
+  "ignored": "(live draw)",
+  "provider": "(live host)",
+  "slug": "openrouter/moonshotai/pro",
+  "tokensThought": "(live count)",
+}
+`;
