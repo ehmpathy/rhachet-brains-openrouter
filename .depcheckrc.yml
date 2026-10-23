@@ -2,8 +2,10 @@
 #        host-local runtime state under .agent/.actors (actor caches, claude code
 #        plugin copies); it is gitignored, never source, and its files import
 #        packages this repo does not use. upstream: declapract-typescript-ehmpathy#639
+#        `.claude` is a symlink into that same actor dir, so it is ignored too.
 ignorePatterns:
   - .agent/.actors
+  - .claude
 ignores:
   - depcheck
   - declapract

@@ -5,6 +5,8 @@
 .artifact
 .cache
 .env
+.patch
+.radio
 .review
 .serverless
 .temp
@@ -15,4 +17,4 @@
 coverage
 dist
 node_modules
-!.agent/.actors/actor.via.slug=.default/
+!.agent/.actors/actor.via.repo=ambient/
