@@ -84,7 +84,9 @@
    │  │       └─ taken: .behavior/v2026_10_21.fix-429-hop-and-tier-fallback/.reviews/peer/5.3.verification._.review.i012.e82b2ca8e71fe4df3f.r012._.taken.by_self.enroll-verif-test-intent.md
    │  └─ judges
    │      └─ j1: $rhachet run --repo bhrain --skill route.stone.judge --mechanism reviewed? --stone $stone --route $route --allow-blockers 0 --allow-nitpicks 7
-   │          └─ finished 10.1s ✓
+   │          └─ · cached
+   │             ├─ on $route/5.3.verification.yield.md
+   │             └─ on src/**/*
    │
    └─ the way continues, run
       └─ rhx route.drive
