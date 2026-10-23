@@ -1,0 +1,4 @@
+# rhachet-roles-bhrain patch = the judge keys a stance by the given's filename, never its raw path
+# upstream: ehmpathy/rhachet-roles-bhrain#693 — drop this patch once #693 releases
+patchedDependencies:
+  rhachet-roles-bhrain@0.42.1: patches/rhachet-roles-bhrain@0.42.1.patch

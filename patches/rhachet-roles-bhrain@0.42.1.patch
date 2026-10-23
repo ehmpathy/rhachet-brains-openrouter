@@ -1,0 +1,164 @@
+diff --git a/dist/domain.operations/route/guard/review/peer/asReviewGivenKey.js b/dist/domain.operations/route/guard/review/peer/asReviewGivenKey.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..6e4a96b0dcb5a6f10862a1c0baf2ba9e4ca5e767
+--- /dev/null
++++ b/dist/domain.operations/route/guard/review/peer/asReviewGivenKey.js
+@@ -0,0 +1,16 @@
++"use strict";
++Object.defineProperty(exports, "__esModule", { value: true });
++exports.asReviewGivenKey = void 0;
++const path_1 = require("path");
++/**
++ * .what = the key a stance uses to name the given it answers — the given's filename
++ * .why = the driver writes a stance, and the `reviewed?` judge runs as a guard subprocess
++ *        with its own cwd and `$route`; each spells the given's absolute path from the route
++ *        path IT sees. a symlinked tree gives two spellings, so a raw-path match lapses every
++ *        stance for the judge alone. the filename is a full key within one route, and the same
++ *        for every reader. legacy rows hold the absolute path; basename of either matches
++ *
++ * .note = patched in from ehmpathy/rhachet-roles-bhrain#693; drop once #693 releases
++ */
++const asReviewGivenKey = (input) => (0, path_1.basename)(input.path);
++exports.asReviewGivenKey = asReviewGivenKey;
+diff --git a/dist/domain.operations/route/guard/review/peer/computeUndeclaredConcernLabels.js b/dist/domain.operations/route/guard/review/peer/computeUndeclaredConcernLabels.js
+index e0b7145d87e354d8bf4dc9cfc4824b7fb111e57c..4fcbeb76c71697d403319b486a175a4e43caa1d9 100644
+--- a/dist/domain.operations/route/guard/review/peer/computeUndeclaredConcernLabels.js
++++ b/dist/domain.operations/route/guard/review/peer/computeUndeclaredConcernLabels.js
+@@ -2,6 +2,7 @@
+ Object.defineProperty(exports, "__esModule", { value: true });
+ exports.computeUndeclaredConcernLabels = void 0;
+ const asReviewConcernRef_1 = require("./asReviewConcernRef");
++const isReviewAbsorptionOnGiven_1 = require("./isReviewAbsorptionOnGiven");
+ /**
+  * .what = of the concerns one given raised, the ones no stance yet covers
+  * .why = TWO callers ask this question of the same corpus — the entrance gate, to know
+@@ -33,8 +34,13 @@ const computeUndeclaredConcernLabels = (input) => {
+     ];
+     // the labels a stance already covers, scoped to THIS given
+     const labelsDeclared = new Set([
++        // .note = patched in from ehmpathy/rhachet-roles-bhrain#693: match by given key, never raw path
+         ...input.absorptions
+-            .filter((one) => one.reviewer === input.slug && one.given === input.pathGiven)
++            .filter((absorption) => (0, isReviewAbsorptionOnGiven_1.isReviewAbsorptionOnGiven)({
++            absorption,
++            reviewer: input.slug,
++            given: input.pathGiven,
++        }))
+             .map((one) => one.about),
+         ...(input.also ?? []),
+     ]);
+diff --git a/dist/domain.operations/route/guard/review/peer/getLiveReviewAbsorptions.js b/dist/domain.operations/route/guard/review/peer/getLiveReviewAbsorptions.js
+index 620c590aa09941f026ec2bf68f7a432e003f8128..c631a2b29248afc91b9afcccd545965c5ae5d7a8 100644
+--- a/dist/domain.operations/route/guard/review/peer/getLiveReviewAbsorptions.js
++++ b/dist/domain.operations/route/guard/review/peer/getLiveReviewAbsorptions.js
+@@ -2,6 +2,7 @@
+ Object.defineProperty(exports, "__esModule", { value: true });
+ exports.getLiveReviewAbsorptions = void 0;
+ const getLatestPeerGivensPerSlug_1 = require("./getLatestPeerGivensPerSlug");
++const isReviewAbsorptionOnGiven_1 = require("./isReviewAbsorptionOnGiven");
+ /**
+  * .what = of the absorptions given, the ones still keyed to their slug's LATEST given
+  * .why = S03's per-generation lapse, and it is ONE rule with two readers — the concession
+@@ -37,11 +38,13 @@ const getLiveReviewAbsorptions = (input) => {
+     //    `input.givens.map` would key on whichever given globbed last — right on one
+     //    machine, wrong on another. getLatestPeerGivensPerSlug is the one selector both
+     //    the debt and the tally already read through.
+-    const pathGivenLatestBySlug = new Map((0, getLatestPeerGivensPerSlug_1.getLatestPeerGivensPerSlug)({ givens: input.givens }).map((one) => [
+-        one.slug,
+-        one.pathGiven,
+-    ]));
+-    return input.absorptions.filter((stance) => pathGivenLatestBySlug.get(stance.reviewer) === stance.given);
++    // .note = patched in from ehmpathy/rhachet-roles-bhrain#693: match by given key, never raw path
++    const givensLatest = (0, getLatestPeerGivensPerSlug_1.getLatestPeerGivensPerSlug)({ givens: input.givens });
++    return input.absorptions.filter((absorption) => givensLatest.some((given) => (0, isReviewAbsorptionOnGiven_1.isReviewAbsorptionOnGiven)({
++        absorption,
++        reviewer: given.slug,
++        given: given.pathGiven,
++    })));
+ };
+ exports.getLiveReviewAbsorptions = getLiveReviewAbsorptions;
+ //# sourceMappingURL=getLiveReviewAbsorptions.js.map
+\ No newline at end of file
+diff --git a/dist/domain.operations/route/guard/review/peer/getStoneReviewAbsorptions.js b/dist/domain.operations/route/guard/review/peer/getStoneReviewAbsorptions.js
+index d481690bb1ab122e9bec5dbb8b9c1a9b8bdbd23f..fe0df8413569262442085f5b698ae5f0c05df7be 100644
+--- a/dist/domain.operations/route/guard/review/peer/getStoneReviewAbsorptions.js
++++ b/dist/domain.operations/route/guard/review/peer/getStoneReviewAbsorptions.js
+@@ -4,6 +4,8 @@ exports.getAbsorptionOnConcern = exports.getStoneReviewAbsorptions = void 0;
+ const helpful_errors_1 = require("helpful-errors");
+ const getAllPassageReportsRaw_1 = require("../../../passage/getAllPassageReportsRaw");
+ const getPassageReportsSinceLastRewind_1 = require("./getPassageReportsSinceLastRewind");
++const asReviewGivenKey_1 = require("./asReviewGivenKey");
++const isReviewAbsorptionOnGiven_1 = require("./isReviewAbsorptionOnGiven");
+ /**
+  * .what = the absorptions that stand on one stone, keyed `(reviewer, concern, given)`
+  * .why = three consumers need this — R3 (a contrary second stance), the judge's tally
+@@ -25,7 +27,8 @@ const getPassageReportsSinceLastRewind_1 = require("./getPassageReportsSinceLast
+  */
+ const getStoneReviewAbsorptions = async (input) => {
+     const all = await (0, getAllPassageReportsRaw_1.getAllPassageReportsRaw)({ route: input.route });
+-    const keyOf = (absorption) => `${absorption.reviewer}::${absorption.about}::${absorption.given}`;
++    // .note = patched in from ehmpathy/rhachet-roles-bhrain#693: the given part keys by filename
++    const keyOf = (absorption) => `${absorption.reviewer}::${absorption.about}::${(0, asReviewGivenKey_1.asReviewGivenKey)({ path: absorption.given })}`;
+     // a rewind voids the round, so the absorptions declared within it are void too.
+     // .why = the given-path key alone does NOT survive a rewind — an unchanged artifact
+     //        re-mints the identical path, so a rewound stance would re-attach silently
+@@ -66,8 +69,11 @@ exports.getStoneReviewAbsorptions = getStoneReviewAbsorptions;
+  *        rather than refused (case=8 [t2b]). a lane-keyed R3 would refuse the commonest
+  *        honest act there is: agree with one point and argue another.
+  */
+-const getAbsorptionOnConcern = (input) => input.absorptions.find((stance) => stance.reviewer === input.reviewer &&
+-    stance.about === input.about &&
+-    stance.given === input.given);
++const getAbsorptionOnConcern = (input) => input.absorptions.find((stance) => stance.about === input.about &&
++    (0, isReviewAbsorptionOnGiven_1.isReviewAbsorptionOnGiven)({
++        absorption: stance,
++        reviewer: input.reviewer,
++        given: input.given,
++    }));
+ exports.getAbsorptionOnConcern = getAbsorptionOnConcern;
+ //# sourceMappingURL=getStoneReviewAbsorptions.js.map
+\ No newline at end of file
+diff --git a/dist/domain.operations/route/guard/review/peer/isReviewAbsorptionOnGiven.js b/dist/domain.operations/route/guard/review/peer/isReviewAbsorptionOnGiven.js
+new file mode 100644
+index 0000000000000000000000000000000000000000..3f1e4338c5b0ea71f41b10f28743adcacaf7e05a
+--- /dev/null
++++ b/dist/domain.operations/route/guard/review/peer/isReviewAbsorptionOnGiven.js
+@@ -0,0 +1,15 @@
++"use strict";
++Object.defineProperty(exports, "__esModule", { value: true });
++exports.isReviewAbsorptionOnGiven = void 0;
++const asReviewGivenKey_1 = require("./asReviewGivenKey");
++/**
++ * .what = whether a stance answers one reviewer's one given
++ * .why = the one place the stance↔given match lives; the given is compared by
++ *        `asReviewGivenKey`, never by raw path
++ *
++ * .note = patched in from ehmpathy/rhachet-roles-bhrain#693; drop once #693 releases
++ */
++const isReviewAbsorptionOnGiven = (input) => input.absorption.reviewer === input.reviewer &&
++    (0, asReviewGivenKey_1.asReviewGivenKey)({ path: input.absorption.given }) ===
++        (0, asReviewGivenKey_1.asReviewGivenKey)({ path: input.given });
++exports.isReviewAbsorptionOnGiven = isReviewAbsorptionOnGiven;
+diff --git a/dist/domain.operations/route/stones/setStoneAsConcernAbsorbed.js b/dist/domain.operations/route/stones/setStoneAsConcernAbsorbed.js
+index 72624a080b7c6c07301174f1f78493a5ef072a1a..e22d748f5a3430fd101035a3adc214179513ac8b 100644
+--- a/dist/domain.operations/route/stones/setStoneAsConcernAbsorbed.js
++++ b/dist/domain.operations/route/stones/setStoneAsConcernAbsorbed.js
+@@ -12,6 +12,7 @@ const asAbsorptionWithSubject_1 = require("../guard/review/peer/asAbsorptionWith
+ const asConfiguredReviewerBySanitizedSlug_1 = require("../guard/review/peer/asConfiguredReviewerBySanitizedSlug");
+ const asPeerReviewLevelBySlug_1 = require("../guard/review/peer/asPeerReviewLevelBySlug");
+ const asReviewConcernRef_1 = require("../guard/review/peer/asReviewConcernRef");
++const asReviewGivenKey_1 = require("../guard/review/peer/asReviewGivenKey");
+ const asSanitizedPeerReviewSlug_1 = require("../guard/review/peer/asSanitizedPeerReviewSlug");
+ const assertFulcrumPathExists_1 = require("../guard/review/peer/assertFulcrumPathExists");
+ const assertValidPeerReviewSlug_1 = require("../guard/review/peer/assertValidPeerReviewSlug");
+@@ -227,7 +228,9 @@ const setStoneAsConcernAbsorbed = async (input) => {
+                 status: input.as,
+                 reviewer: slug,
+                 about,
+-                given: given.pathGiven,
++                // .note = patched in from ehmpathy/rhachet-roles-bhrain#693: the filename, never the
++                //         absolute path, so every reader derives the same key (asReviewGivenKey)
++                given: (0, asReviewGivenKey_1.asReviewGivenKey)({ path: given.pathGiven }),
+                 fulcrum: input.why,
+                 severity,
+                 reason: `${input.as} review.peer: ${slug} ${about}${severity ? ` (${severity})` : ''}`,
