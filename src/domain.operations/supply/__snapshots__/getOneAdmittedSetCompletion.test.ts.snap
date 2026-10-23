@@ -1,0 +1,315 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`getOneAdmittedSetCompletion given: [case1] the first host openrouter picks serves when: [t0] the set is sent then: the sends and the trail match snapshot 1`] = `
+{
+  "admittedFinal": [
+    "A",
+    "B",
+    "C",
+  ],
+  "attempts": [],
+  "sends": [
+    [
+      "A",
+      "B",
+      "C",
+    ],
+  ],
+  "servedId": "gen-A",
+}
+`;
+
+exports[`getOneAdmittedSetCompletion given: [case2] the host openrouter picks throttles (#21) when: [t0] the set is sent then: the sends and the trail match snapshot 1`] = `
+{
+  "admittedFinal": [
+    "B",
+    "C",
+  ],
+  "attempts": [
+    {
+      "outcome": "throttled",
+      "tag": "A",
+    },
+  ],
+  "sends": [
+    [
+      "A",
+      "B",
+      "C",
+    ],
+    [
+      "B",
+      "C",
+    ],
+  ],
+  "servedId": "gen-B",
+}
+`;
+
+exports[`getOneAdmittedSetCompletion given: [case3] the host openrouter picks returns a host 400 when: [t0] the set is sent then: the sends and the trail match snapshot 1`] = `
+{
+  "admittedFinal": [
+    "B",
+    "C",
+  ],
+  "attempts": [
+    {
+      "outcome": "failed",
+      "tag": "A",
+    },
+  ],
+  "sends": [
+    [
+      "A",
+      "B",
+      "C",
+    ],
+    [
+      "B",
+      "C",
+    ],
+  ],
+  "servedId": "gen-B",
+}
+`;
+
+exports[`getOneAdmittedSetCompletion given: [case4] three different faults, then a serve (the densest walk) when: [t0] the set is sent then: the sends and the trail match snapshot 1`] = `
+{
+  "admittedFinal": [
+    "D",
+  ],
+  "attempts": [
+    {
+      "outcome": "throttled",
+      "tag": "A",
+    },
+    {
+      "outcome": "refused",
+      "tag": "B",
+    },
+    {
+      "outcome": "failed",
+      "tag": "C",
+    },
+  ],
+  "sends": [
+    [
+      "A",
+      "B",
+      "C",
+      "D",
+    ],
+    [
+      "B",
+      "C",
+      "D",
+    ],
+    [
+      "C",
+      "D",
+    ],
+    [
+      "D",
+    ],
+  ],
+  "servedId": "gen-D",
+}
+`;
+
+exports[`getOneAdmittedSetCompletion given: [case5] every host faults when: [t0] the set is sent then: the message matches snapshot 1`] = `
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), or answered prose where json was owed. no answer was returned.
+
+  throttled A
+  failed    B
+  refused   C
+
+fix: retry after 7s (openrouter's retry-after), or loosen a promise so more endpoints qualify.
+
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "attempts": [
+    {
+      "tag": "A",
+      "outcome": "throttled"
+    },
+    {
+      "tag": "B",
+      "outcome": "failed"
+    },
+    {
+      "tag": "C",
+      "outcome": "refused"
+    }
+  ],
+  "retryAfter": "7",
+  "faultReasonLast": null
+}"
+`;
+
+exports[`getOneAdmittedSetCompletion given: [case6] the host returns the caller's own 400 when: [t0] the set is sent then: the message the caller sees matches snapshot 1`] = `"400 messages: field required"`;
+
+exports[`getOneAdmittedSetCompletion given: [case7] a fault with no host mark (openrouter answers) when: [t0] the send answers its normalized 429 then: the message the caller sees matches snapshot 1`] = `"429 Rate limit exceeded"`;
+
+exports[`getOneAdmittedSetCompletion given: [case7] a fault with no host mark (openrouter answers) when: [t1] the send answers a 404 with no name then: the message the caller sees matches snapshot 1`] = `"404 No endpoints found"`;
+
+exports[`getOneAdmittedSetCompletion given: [case8] one provider serves two endpoints, and throttles when: [t0] the set is sent then: the sends and the trail match snapshot 1`] = `
+{
+  "admittedFinal": [
+    "B",
+  ],
+  "attempts": [
+    {
+      "outcome": "throttled",
+      "tag": "A/fp8",
+    },
+    {
+      "outcome": "throttled",
+      "tag": "A/bf16",
+    },
+  ],
+  "sends": [
+    [
+      "A/fp8",
+      "A/bf16",
+      "B",
+    ],
+    [
+      "B",
+    ],
+  ],
+  "servedId": "gen-B",
+}
+`;
+
+exports[`getOneAdmittedSetCompletion given: [case9] a host fault that names a host outside the set when: [t0] the set is sent then: the sends and the trail match snapshot 1`] = `
+{
+  "admittedFinal": [
+    "B",
+  ],
+  "attempts": [
+    {
+      "outcome": "failed",
+      "tag": "A",
+    },
+  ],
+  "sends": [
+    [
+      "A",
+      "B",
+    ],
+    [
+      "A",
+    ],
+    [
+      "B",
+    ],
+  ],
+  "servedId": "gen-B",
+}
+`;
+
+exports[`getOneAdmittedSetCompletion given: [case10] a throttle names a wait, then a later host fault names none when: [t0] the set is sent and every host faults then: the message the caller sees matches snapshot 1`] = `
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), or answered prose where json was owed. no answer was returned.
+
+  throttled A
+  failed    B
+
+fix: retry after 7s (openrouter's retry-after), or loosen a promise so more endpoints qualify.
+
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "attempts": [
+    {
+      "tag": "A",
+      "outcome": "throttled"
+    },
+    {
+      "tag": "B",
+      "outcome": "failed"
+    }
+  ],
+  "retryAfter": "7",
+  "faultReasonLast": null
+}"
+`;
+
+exports[`getOneAdmittedSetCompletion given: [case11] every host throttles, each with its own reason when: [t0] the set is sent then: the message the caller sees matches snapshot 1`] = `
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), or answered prose where json was owed. no answer was returned.
+
+  throttled A
+  throttled B
+
+last host fault: rate limited upstream
+
+fix: retry after 7s (openrouter's retry-after), or loosen a promise so more endpoints qualify.
+
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "attempts": [
+    {
+      "tag": "A",
+      "outcome": "throttled"
+    },
+    {
+      "tag": "B",
+      "outcome": "throttled"
+    }
+  ],
+  "retryAfter": "7",
+  "faultReasonLast": "rate limited upstream"
+}"
+`;
+
+exports[`getOneAdmittedSetCompletion given: [case12] a host fault, marked, that names no host when: [t0] the send answers a marked 429 with no name then: the sends and the trail match snapshot 1`] = `
+{
+  "admittedFinal": [
+    "B",
+  ],
+  "attempts": [
+    {
+      "outcome": "throttled",
+      "tag": "A",
+    },
+  ],
+  "sends": [
+    [
+      "A",
+      "B",
+    ],
+    [
+      "A",
+    ],
+    [
+      "B",
+    ],
+  ],
+  "servedId": "gen-B",
+}
+`;
+
+exports[`getOneAdmittedSetCompletion given: [case12] a host fault, marked, that names no host when: [t1] every send answers a marked 429 with no name then: the message the caller sees matches snapshot 1`] = `
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), or answered prose where json was owed. no answer was returned.
+
+  throttled A
+  throttled B
+
+last host fault: rate limited upstream
+
+fix: retry after 7s (openrouter's retry-after), or loosen a promise so more endpoints qualify.
+
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "attempts": [
+    {
+      "tag": "A",
+      "outcome": "throttled"
+    },
+    {
+      "tag": "B",
+      "outcome": "throttled"
+    }
+  ],
+  "retryAfter": "7",
+  "faultReasonLast": "rate limited upstream"
+}"
+`;

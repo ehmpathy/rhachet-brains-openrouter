@@ -1,0 +1,196 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`getOneSuppliedCompletion a filtered ask with no floor admits the whole qualified set at once 1`] = `
+{
+  "attempts": [
+    {
+      "outcome": "served",
+      "tag": "dear",
+    },
+  ],
+  "choice": {
+    "funnel": [
+      {
+        "left": 2,
+        "promise": "all endpoints",
+      },
+      {
+        "left": 2,
+        "promise": "privacy=full (zdr list)",
+      },
+    ],
+    "ranked": [
+      {
+        "estUsd": 8e-7,
+        "tag": "cheap",
+        "tps": 90,
+        "verdict": "qualified",
+      },
+      {
+        "estUsd": 0.0000072,
+        "tag": "dear",
+        "tps": 90,
+        "verdict": "qualified",
+      },
+    ],
+    "tokensEstimate": {
+      "input": 8,
+    },
+  },
+  "generationId": "gen-fake",
+  "provider": "Dear",
+}
+`;
+
+exports[`getOneSuppliedCompletion a floor ask admits the cheapest qualified endpoint alone 1`] = `
+{
+  "attempts": [
+    {
+      "outcome": "served",
+      "tag": "cheap",
+    },
+  ],
+  "choice": {
+    "funnel": [
+      {
+        "left": 2,
+        "promise": "all endpoints",
+      },
+    ],
+    "ranked": [
+      {
+        "estUsd": 8e-7,
+        "tag": "cheap",
+        "tps": 90,
+        "verdict": "qualified",
+      },
+      {
+        "estUsd": 0.0000072,
+        "tag": "dear",
+        "tps": 90,
+        "verdict": "qualified",
+      },
+    ],
+    "tokensEstimate": {
+      "input": 8,
+    },
+  },
+  "generationId": "gen-fake",
+  "provider": "Cheap",
+}
+`;
+
+exports[`getOneSuppliedCompletion, a host fault on the admitted set (#21) given: [case1] the cheaper admitted host throttles, the other serves when: [t0] a filtered ask with no floor is supplied then: the supply report a caller audits matches snapshot 1`] = `
+{
+  "attempts": [
+    {
+      "outcome": "throttled",
+      "tag": "cheap",
+    },
+    {
+      "outcome": "served",
+      "tag": "dear",
+    },
+  ],
+  "choice": {
+    "funnel": [
+      {
+        "left": 2,
+        "promise": "all endpoints",
+      },
+      {
+        "left": 2,
+        "promise": "privacy=full (zdr list)",
+      },
+    ],
+    "ranked": [
+      {
+        "estUsd": 8e-7,
+        "tag": "cheap",
+        "tps": 90,
+        "verdict": "qualified",
+      },
+      {
+        "estUsd": 0.0000072,
+        "tag": "dear",
+        "tps": 90,
+        "verdict": "qualified",
+      },
+    ],
+    "tokensEstimate": {
+      "input": 8,
+    },
+  },
+  "generationId": "gen-dear",
+  "provider": "Dear",
+}
+`;
+
+exports[`getOneSuppliedCompletion, a host fault on the admitted set (#21) given: [case1b] on the floor, the cheapest host throttles, the next serves when: [t0] a floor ask is supplied then: the supply report a caller audits matches snapshot 1`] = `
+{
+  "attempts": [
+    {
+      "outcome": "throttled",
+      "tag": "cheap",
+    },
+    {
+      "outcome": "served",
+      "tag": "dear",
+    },
+  ],
+  "choice": {
+    "funnel": [
+      {
+        "left": 2,
+        "promise": "all endpoints",
+      },
+    ],
+    "ranked": [
+      {
+        "estUsd": 8e-7,
+        "tag": "cheap",
+        "tps": 90,
+        "verdict": "qualified",
+      },
+      {
+        "estUsd": 0.0000072,
+        "tag": "dear",
+        "tps": 90,
+        "verdict": "qualified",
+      },
+    ],
+    "tokensEstimate": {
+      "input": 8,
+    },
+  },
+  "generationId": "gen-dear",
+  "provider": "Dear",
+}
+`;
+
+exports[`getOneSuppliedCompletion, a host fault on the admitted set (#21) given: [case2] every admitted host faults, the last on the request itself when: [t0] the error is named as \`brain.ask\` names it then: the message the caller sees matches snapshot 1`] = `
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), or answered prose where json was owed. no answer was returned.
+
+  throttled cheap
+  failed    dear
+
+last host fault: This endpoint's maximum context length is 163840 tokens. However, you requested about 201234 tokens.
+
+fix: if the last host fault names your request (e.g. a context limit), fix the request; else retry after 7s (openrouter's retry-after), or loosen a promise so more endpoints qualify.
+
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "attempts": [
+    {
+      "tag": "cheap",
+      "outcome": "throttled"
+    },
+    {
+      "tag": "dear",
+      "outcome": "failed"
+    }
+  ],
+  "retryAfter": "7",
+  "faultReasonLast": "This endpoint's maximum context length is 163840 tokens. However, you requested about 201234 tokens."
+}"
+`;

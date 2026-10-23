@@ -154,7 +154,7 @@ exports[`genBrainAtom.supply.integration given: [case5] a price bound: floor&pri
 
 exports[`genBrainAtom.supply.integration given: [case6] a filter with no floor: privacy=full when: [t0] asked then: the supply report a caller audits matches snapshot 1`] = `
 {
-  "attempts": [],
+  "attempts": "(live hops; last = served)",
   "choice": {
     "funnel": [
       {

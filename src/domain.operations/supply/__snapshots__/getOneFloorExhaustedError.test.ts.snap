@@ -1,7 +1,71 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
+exports[`getOneFloorExhaustedError a walk whose last host 400 named the caller's request shows that reason, and says to fix the request 1`] = `
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), or answered prose where json was owed. no answer was returned.
+
+  throttled cheap/fp8
+  refused   mid/fp8
+  failed    dear/bf16
+
+last host fault: This endpoint's maximum context length is 163840 tokens. However, you requested about 201234 tokens.
+
+fix: if the last host fault names your request (e.g. a context limit), fix the request; else retry after 7s (openrouter's retry-after), or loosen a promise so more endpoints qualify.
+
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "attempts": [
+    {
+      "tag": "cheap/fp8",
+      "outcome": "throttled"
+    },
+    {
+      "tag": "mid/fp8",
+      "outcome": "refused"
+    },
+    {
+      "tag": "dear/bf16",
+      "outcome": "failed"
+    }
+  ],
+  "retryAfter": "7",
+  "faultReasonLast": "This endpoint's maximum context length is 163840 tokens. However, you requested about 201234 tokens."
+}"
+`;
+
+exports[`getOneFloorExhaustedError a walk whose last host throttled shows its reason, and never blames the request 1`] = `
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), or answered prose where json was owed. no answer was returned.
+
+  throttled cheap/fp8
+  refused   mid/fp8
+  failed    dear/bf16
+
+last host fault: rate limited upstream
+
+fix: retry after 7s (openrouter's retry-after), or loosen a promise so more endpoints qualify.
+
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "attempts": [
+    {
+      "tag": "cheap/fp8",
+      "outcome": "throttled"
+    },
+    {
+      "tag": "mid/fp8",
+      "outcome": "refused"
+    },
+    {
+      "tag": "dear/bf16",
+      "outcome": "failed"
+    }
+  ],
+  "retryAfter": "7",
+  "faultReasonLast": "rate limited upstream"
+}"
+`;
+
 exports[`getOneFloorExhaustedError a walk with a throttle names the wait openrouter asked for 1`] = `
-"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed mid-reply, or answered prose where json was owed. no answer was returned.
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), or answered prose where json was owed. no answer was returned.
 
   throttled cheap/fp8
   refused   mid/fp8
@@ -25,12 +89,13 @@ fix: retry after 7s (openrouter's retry-after), or loosen a promise so more endp
       "outcome": "failed"
     }
   ],
-  "retryAfter": "7"
+  "retryAfter": "7",
+  "faultReasonLast": null
 }"
 `;
 
 exports[`getOneFloorExhaustedError a walk with no throttle says to retry later 1`] = `
-"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed mid-reply, or answered prose where json was owed. no answer was returned.
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), or answered prose where json was owed. no answer was returned.
 
   throttled cheap/fp8
   refused   mid/fp8
@@ -54,6 +119,39 @@ fix: retry later, or loosen a promise so more endpoints qualify.
       "outcome": "failed"
     }
   ],
-  "retryAfter": null
+  "retryAfter": null,
+  "faultReasonLast": null
+}"
+`;
+
+exports[`getOneFloorExhaustedError a walk with no throttle whose last host 400 named the request says to fix it, else retry later 1`] = `
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), or answered prose where json was owed. no answer was returned.
+
+  throttled cheap/fp8
+  refused   mid/fp8
+  failed    dear/bf16
+
+last host fault: This endpoint's maximum context length is 163840 tokens. However, you requested about 201234 tokens.
+
+fix: if the last host fault names your request (e.g. a context limit), fix the request; else retry later, or loosen a promise so more endpoints qualify.
+
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "attempts": [
+    {
+      "tag": "cheap/fp8",
+      "outcome": "throttled"
+    },
+    {
+      "tag": "mid/fp8",
+      "outcome": "refused"
+    },
+    {
+      "tag": "dear/bf16",
+      "outcome": "failed"
+    }
+  ],
+  "retryAfter": null,
+  "faultReasonLast": "This endpoint's maximum context length is 163840 tokens. However, you requested about 201234 tokens."
 }"
 `;

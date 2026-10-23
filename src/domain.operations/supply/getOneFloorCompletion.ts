@@ -1,7 +1,9 @@
-import OpenAI from 'openai';
+import type OpenAI from 'openai';
 
 import type { FloorAttempt } from '../../domain.objects/FloorAttempt';
 import type { OpenRouterEndpoint } from '../../domain.objects/OpenRouterEndpoint';
+import { asHostFault } from './asHostFault';
+import { asRetryAfter } from './asRetryAfter';
 import type { SupplyFilters } from './asSupplyFilters';
 import { getOneCompletionFromEndpoint } from './getOneCompletionFromEndpoint';
 import { getOneFloorExhaustedError } from './getOneFloorExhaustedError';
@@ -12,40 +14,10 @@ import type { SdkOpenRouterEndpoints } from './sdkOpenRouterEndpoints';
 type ChatRequest = OpenAI.ChatCompletionCreateParamsNonStreaming; // .note = the openai sdk's own type name
 
 /**
- * .what = how a call to an admitted endpoint failed, if it is a failure the walk steps past
- * .why = a 429 (throttle) and a 404 (openrouter cannot reach the admitted endpoint) are
- *        both fast and local to that endpoint: the next endpoint may serve. all else rethrows
- */
-const asStepOutcome = (input: {
-  error: unknown;
-}): 'throttled' | 'refused' | null => {
-  if (!(input.error instanceof OpenAI.APIError)) return null;
-  if (input.error.status === 429) return 'throttled';
-  if (input.error.status === 404) return 'refused';
-  return null;
-};
-
-/**
- * .what = the `retry-after` a throttle sent, if any
- * .why = case=14 owes the caller the wait openrouter asked for, so a fleet backs
- *        off by the server's clock rather than a guess
- *
- * .note = the headers are checked at runtime, not trusted to the sdk's type: a
- *         shape other than `Headers`, or a blank value, reads as no wait at all
- */
-const asRetryAfter = (input: { error: unknown }): string | null => {
-  if (!(input.error instanceof OpenAI.APIError)) return null;
-  const headers: unknown = input.error.headers;
-  if (!(headers instanceof Headers)) return null;
-  const value = headers.get('retry-after');
-  return value !== null && value.trim() !== '' ? value.trim() : null;
-};
-
-/**
  * .what = walks the qualified endpoints cheapest-first, one admitted alone per hop
- * .why = `floor` must land on the cheapest endpoint that serves now; a throttle,
- *        a refusal, or a reply the host failed mid-way steps to the next, never
- *        to a pricier host openrouter picks
+ * .why = `floor` must land on the cheapest endpoint that serves now; a host
+ *        fault (`asHostFault`) or a reply the host failed mid-way steps to the
+ *        next, never to a pricier host openrouter picks
  *
  * .note = a refusal proves the cached endpoint list stale, so the model's entry
  *         is dropped; the next ask reads it live (case=21)
@@ -66,6 +38,7 @@ export const getOneFloorCompletion = async (
     queue: OpenRouterEndpoint[];
     attempts: FloorAttempt[];
     retryAfter: string | null; // the latest throttle's `retry-after`, seconds
+    faultLast: Error | null; // the last step's own error, for the refusal; null when the last host threw none
   },
   context: {
     openai: OpenAI;
@@ -77,7 +50,7 @@ export const getOneFloorCompletion = async (
 ): Promise<{
   response: OpenAI.ChatCompletion;
   admitted: OpenRouterEndpoint[]; // the one endpoint that served, admitted alone
-  attempts: FloorAttempt[];
+  attempts: FloorAttempt[]; // each endpoint stepped past; the serve is the caller's to record
 }> => {
   // every qualified endpoint was tried and none served
   const [endpoint, ...rest] = input.queue;
@@ -105,6 +78,7 @@ export const getOneFloorCompletion = async (
             ...input.attempts,
             { tag: endpoint.tag, outcome: 'prose' },
           ],
+          faultLast: null, // this host threw no error; an earlier host's is not the last
         },
         context,
       );
@@ -120,29 +94,31 @@ export const getOneFloorCompletion = async (
             ...input.attempts,
             { tag: endpoint.tag, outcome: 'failed' },
           ],
+          faultLast: null, // this host threw no error; an earlier host's is not the last
         },
         context,
       );
 
-    return {
-      response,
-      admitted: [endpoint],
-      attempts: [...input.attempts, { tag: endpoint.tag, outcome: 'served' }],
-    };
+    // the serve itself is recorded by the caller, once for both supply modes
+    return { response, admitted: [endpoint], attempts: input.attempts };
   } catch (error) {
-    // a failure the walk cannot step past is the caller's to see, untouched
-    const outcome = asStepOutcome({ error });
-    if (!outcome) throw error;
+    // a failure that is not the host's is the caller's to see, untouched
+    const fault = asHostFault({ error });
+    if (!fault) throw error;
 
     // a refusal proves the cached list stale: drop it, then step
-    if (outcome === 'refused')
+    if (fault.outcome === 'refused')
       await context.sdkOpenRouterEndpoints.delForModel({ model: input.model });
     return getOneFloorCompletion(
       {
         ...input,
         queue: rest,
-        attempts: [...input.attempts, { tag: endpoint.tag, outcome }],
+        attempts: [
+          ...input.attempts,
+          { tag: endpoint.tag, outcome: fault.outcome },
+        ],
         retryAfter: asRetryAfter({ error }) ?? input.retryAfter,
+        faultLast: error instanceof Error ? error : input.faultLast,
       },
       context,
     );

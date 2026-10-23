@@ -255,9 +255,40 @@ const result = await brainAtom.ask({ ... }, context);
 const supply = (result as unknown as { supply: SupplyReport }).supply;
 // supply.provider       who served
 // supply.generationId   audit the served endpoint later via GET /generation
-// supply.attempts       each endpoint tried, in order; the last one 'served'
+// supply.attempts       each hop, in order — see below
 // supply.choice         how many endpoints survived each filter, and each rate
 ```
+
+`supply.attempts` lists each endpoint tried, in order, in both supply modes. the last row is the
+endpoint that served, marked `served`. each row before it is a host fault (`throttled`,
+`refused`, `failed`) or a reply in prose where json was owed (`prose`).
+
+- **floor** — one row per endpoint tried, cheapest first
+- **no floor** — one row per endpoint dropped after a host fault. a send that serves at once
+  holds one row: the serve
+
+the hops are silent on success. log `supply.attempts` to see why an ask ran slow.
+
+### host faults
+
+both modes step past a host that faults: a 429 (`throttled`), a 404 (`refused`), or a 400 that
+openrouter marks as the host's own (`Provider returned error`, or a named host) — `failed`. the
+floor walk steps to the next endpoint. without a floor, the host openrouter named leaves the
+admitted set and the ask is re-sent to the rest.
+
+a host fault openrouter marks as a host's (`Provider returned error`) yet names no admitted host
+cannot say which host to drop, so the rest of the ask walks the set one endpoint per send, as a
+floor walk does. without a floor, a fault with no host mark is openrouter's own answer — its
+`429 Rate limit exceeded` (the account limit), or a 404 for a withdrawn model. no other host can
+fix it, so it rethrows untouched after one send. the floor walk admits one endpoint per send, so it
+reads any 429 or 404 as that endpoint's and steps on. a caller's own 400 rethrows as it came,
+after one send, in both modes.
+
+openrouter's `retry-after` is reported in the refusal, not waited on between hops. the openai
+client retries each 429 twice on its own before a hop, and those retries do wait out
+`retry-after`, up to 60s each. so a host that asks for 30s costs about a minute before the hop. a
+walk after a marked fault that names no host retries twice more per host, so it costs about two
+minutes before the next host serves.
 
 ### refusals — each names its fix
 
@@ -268,7 +299,7 @@ const supply = (result as unknown as { supply: SupplyReport }).supply;
 | an id openrouter does not list | `ConstraintError`, before any call — the nearest ids |
 | a tier whose line holds no live model | `ConstraintError`, before any call — names the line |
 | a literal pattern, e.g. `openrouter/*/*` | `ConstraintError` — a pattern is not a model |
-| every qualified endpoint throttles, refuses, or answers badly | `MalfunctionError` — each attempt listed |
+| every qualified endpoint throttles, refuses, fails with its own error, or answers badly — with or without a floor | `MalfunctionError` — each attempt listed, openrouter's `retry-after`, and the last host's own reason (e.g. a context limit, which needs a fix to the request, not a retry) |
 | openrouter has withdrawn the model | `ConstraintError` — the date it was withdrawn, and the nearest live ids |
 | the response names a provider the call did not accept | `MalfunctionError` — the answer is withheld |
 | 402 no credits · 401 bad key | `ConstraintError` — names the credits page or the keyrack fill |

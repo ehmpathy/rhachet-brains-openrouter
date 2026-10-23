@@ -16,6 +16,10 @@ type HostBehavior =
   | 'prose'
   | 'fail'
   | 'errorBody'
+  | 'hostError400' // a 400 the host returned, as openrouter marks it (captured 2026-10-21)
+  | 'hostError400Reason' // a host 400 whose body names a reason (a context limit)
+  | 'callerError400' // a 400 openrouter returned for the request itself
+  | 'strangerError400' // a host 400 whose name is not the admitted host's
   | 429
   | 404
   | 500;
@@ -54,6 +58,55 @@ const genOpenAiFake = (input: {
             allowFallbacks: request.provider.allow_fallbacks,
           });
           const behavior = input.behaviorByTag[tag];
+          // a host 400 carries openrouter's marker and the host's name
+          if (behavior === 'hostError400')
+            throw new OpenAI.APIError(
+              400,
+              {
+                message: 'Provider returned error',
+                code: 400,
+                metadata: { provider_name: tag, raw: '{}' },
+              },
+              undefined,
+              new Headers(),
+            );
+          // a host 400 may carry its own reason, which may name the request
+          if (behavior === 'hostError400Reason')
+            throw new OpenAI.APIError(
+              400,
+              {
+                message: 'Provider returned error',
+                code: 400,
+                metadata: {
+                  provider_name: tag,
+                  raw: JSON.stringify({
+                    error: { message: 'maximum context length exceeded' },
+                  }),
+                },
+              },
+              undefined,
+              new Headers(),
+            );
+          // a host 400 may name a host other than the one admitted
+          if (behavior === 'strangerError400')
+            throw new OpenAI.APIError(
+              400,
+              {
+                message: 'Provider returned error',
+                code: 400,
+                metadata: { provider_name: 'Stranger', raw: '{}' },
+              },
+              undefined,
+              new Headers(),
+            );
+          // a caller 400 carries neither
+          if (behavior === 'callerError400')
+            throw new OpenAI.APIError(
+              400,
+              { message: 'messages: field required', code: 400 },
+              undefined,
+              new Headers(),
+            );
           // a host can also answer 200 with an `error` where `choices` belongs
           if (behavior === 'errorBody')
             return {
@@ -80,7 +133,7 @@ const genOpenAiFake = (input: {
           throw new OpenAI.APIError(
             behavior,
             undefined,
-            `${behavior} from ${tag}`,
+            `host error from ${tag}`, // the sdk prefixes the status itself
             new Headers(behavior === 429 ? { 'retry-after': '7' } : {}),
           );
         },
@@ -159,6 +212,7 @@ const runWalk = async (input: {
       queue: QUEUE,
       attempts: [],
       retryAfter: null,
+      faultLast: null,
     },
     { openai, sdkOpenRouterEndpoints },
   );
@@ -171,6 +225,22 @@ const runWalk = async (input: {
     marks,
   };
 };
+
+/**
+ * .what = what a served walk leaves behind: each send's admitted endpoint, the
+ *         trail of endpoints stepped past, and the one that served
+ * .why = the caller's `supply.attempts` is this trail plus the serve; a snapshot per
+ *        variant lets a reviewer read every trail shape, `prose` included
+ *
+ * .note = every value comes from the fixtures, so none is masked
+ */
+const asStableWalk = (input: {
+  scene: Awaited<ReturnType<typeof runWalk>>;
+}) => ({
+  sends: input.scene.admitted,
+  attempts: input.scene.attempts,
+  servedTag: input.scene.servedTag,
+});
 
 describe('getOneFloorCompletion', () => {
   given('[case1] the cheapest endpoint serves', () => {
@@ -187,12 +257,16 @@ describe('getOneFloorCompletion', () => {
         expect(scene.fallbacks).toEqual([false]);
       });
 
-      then('the attempt trail is one served hop', () => {
-        expect(scene.attempts).toEqual([{ tag: 'cheap', outcome: 'served' }]);
+      then('the trail holds no step; the serve is the caller to record', () => {
+        expect(scene.attempts).toEqual([]);
       });
 
       then('no cache entry is dropped', () => {
         expect(scene.dels).toEqual([]);
+      });
+
+      then('the sends and the trail match snapshot', () => {
+        expect(asStableWalk({ scene })).toMatchSnapshot();
       });
     });
   });
@@ -214,8 +288,11 @@ describe('getOneFloorCompletion', () => {
       then('the trail names the throttle', () => {
         expect(scene.attempts).toEqual([
           { tag: 'cheap', outcome: 'throttled' },
-          { tag: 'mid', outcome: 'served' },
         ]);
+      });
+
+      then('the sends and the trail match snapshot', () => {
+        expect(asStableWalk({ scene })).toMatchSnapshot();
       });
 
       then('a throttle drops no cache entry; the list is still true', () => {
@@ -243,7 +320,6 @@ describe('getOneFloorCompletion', () => {
         then('the trail names the refusal', () => {
           expect(scene.attempts).toEqual([
             { tag: 'cheap', outcome: 'refused' },
-            { tag: 'mid', outcome: 'served' },
           ]);
         });
 
@@ -253,6 +329,10 @@ describe('getOneFloorCompletion', () => {
             expect(scene.dels).toEqual([MODEL]);
           },
         );
+
+        then('the sends and the trail match snapshot', () => {
+          expect(asStableWalk({ scene })).toMatchSnapshot();
+        });
       });
     },
   );
@@ -275,10 +355,7 @@ describe('getOneFloorCompletion', () => {
       });
 
       then('the trail names the failed hop', () => {
-        expect(scene.attempts).toEqual([
-          { tag: 'cheap', outcome: 'failed' },
-          { tag: 'mid', outcome: 'served' },
-        ]);
+        expect(scene.attempts).toEqual([{ tag: 'cheap', outcome: 'failed' }]);
       });
 
       then(
@@ -309,10 +386,7 @@ describe('getOneFloorCompletion', () => {
         });
 
         then('the trail names the failed hop', () => {
-          expect(scene.attempts).toEqual([
-            { tag: 'cheap', outcome: 'failed' },
-            { tag: 'mid', outcome: 'served' },
-          ]);
+          expect(scene.attempts).toEqual([{ tag: 'cheap', outcome: 'failed' }]);
         });
       });
     },
@@ -342,10 +416,7 @@ describe('getOneFloorCompletion', () => {
         });
 
         then('the trail names the prose hop', () => {
-          expect(scene.attempts).toEqual([
-            { tag: 'cheap', outcome: 'prose' },
-            { tag: 'mid', outcome: 'served' },
-          ]);
+          expect(scene.attempts).toEqual([{ tag: 'cheap', outcome: 'prose' }]);
         });
 
         then('the prose host is remembered, for this model alone', () => {
@@ -358,6 +429,10 @@ describe('getOneFloorCompletion', () => {
             expect(scene.dels).toEqual([]);
           },
         );
+
+        then('the sends and the trail match snapshot', () => {
+          expect(asStableWalk({ scene })).toMatchSnapshot();
+        });
       });
 
       when('[t1] the walk runs a plain ask', () => {
@@ -375,6 +450,102 @@ describe('getOneFloorCompletion', () => {
         then('no host is remembered', () => {
           expect(scene.marks).toEqual([]);
         });
+      });
+    },
+  );
+
+  // 🔴 .why = measured 2026-10-21: every 1.vision peer reviewer of three crews
+  //           died on `400 Provider returned error` from host OpenInference on
+  //           deepseek/flash. the host failed, not the caller: step on
+  given('[case9] the cheapest endpoint returns a host 400', () => {
+    when('[t0] the walk runs', () => {
+      const scene = useThen('it serves', async () =>
+        runWalk({
+          expectsJson: false,
+          behaviorByTag: { cheap: 'hostError400', mid: 'serve', dear: 'serve' },
+        }),
+      );
+
+      then('it steps to the next cheapest, never further', () => {
+        expect(scene.admitted).toEqual([['cheap'], ['mid']]);
+        expect(scene.servedTag).toEqual('mid');
+      });
+
+      then('the trail names the failed hop', () => {
+        expect(scene.attempts).toEqual([{ tag: 'cheap', outcome: 'failed' }]);
+      });
+
+      then('a host 400 drops no cache entry; the list is still true', () => {
+        expect(scene.dels).toEqual([]);
+      });
+
+      then('the sends and the trail match snapshot', () => {
+        expect(asStableWalk({ scene })).toMatchSnapshot();
+      });
+    });
+  });
+
+  given("[case10] the cheapest endpoint returns the caller's own 400", () => {
+    when('[t0] the walk runs', () => {
+      then(
+        'the error rethrows untouched, and no other endpoint is tried',
+        async () => {
+          const { openai, admits } = genOpenAiFake({
+            behaviorByTag: {
+              cheap: 'callerError400',
+              mid: 'serve',
+              dear: 'serve',
+            },
+          });
+          const { sdkOpenRouterEndpoints } = genSdkFake();
+          const error = await getError(
+            getOneFloorCompletion(
+              {
+                model: MODEL,
+                request: REQUEST,
+                filters: FILTERS,
+                expectsJson: false,
+                queue: QUEUE,
+                attempts: [],
+                retryAfter: null,
+                faultLast: null,
+              },
+              { openai, sdkOpenRouterEndpoints },
+            ),
+          );
+          expect(error).toBeInstanceOf(OpenAI.APIError);
+          expect(error.message).toContain('messages: field required');
+          expect(admits.map((p) => p.only)).toEqual([['cheap']]);
+          expect(error.message).toMatchSnapshot(); // the message the caller sees
+        },
+      );
+    });
+  });
+
+  given(
+    '[case11] the cheapest endpoint returns a host 400 that names a stranger',
+    () => {
+      when('[t0] the walk runs', () => {
+        const scene = useThen('it serves', async () =>
+          runWalk({
+            expectsJson: false,
+            behaviorByTag: {
+              cheap: 'strangerError400',
+              mid: 'serve',
+              dear: 'serve',
+            },
+          }),
+        );
+
+        then(
+          'it steps anyway: the walk admitted one host, so the fault is its',
+          () => {
+            expect(scene.admitted).toEqual([['cheap'], ['mid']]);
+            expect(scene.attempts).toEqual([
+              { tag: 'cheap', outcome: 'failed' },
+            ]);
+          },
+        );
       });
     },
   );
@@ -415,6 +586,58 @@ describe('getOneFloorCompletion', () => {
     });
   });
 
+  // .why = the refusal speaks only of the last host. a host that fails
+  //        mid-reply threw no error, so `cheap`'s reason is dropped on purpose:
+  //        to show it would offer "fix the request" for a fault the walk got past.
+  //        the snapshot shows that drop, the three `failed` rows, and `retry later`
+  given(
+    '[case12] a host 400 names a reason, then the later hosts fail mid-reply',
+    () => {
+      when('[t0] the walk runs', () => {
+        const scene = useThen('it fails loud', async () => {
+          const error = await getError(
+            runWalk({
+              expectsJson: false,
+              behaviorByTag: {
+                cheap: 'hostError400Reason',
+                mid: 'fail',
+                dear: 'fail',
+              },
+            }),
+          );
+          const cause = 'cause' in error ? error.cause : undefined;
+          return {
+            isMalfunction: error instanceof MalfunctionError,
+            message: error.message,
+            hasCause: cause !== undefined && cause !== null,
+          };
+        });
+
+        then('it lists every host it stepped past', () => {
+          expect(scene.isMalfunction).toEqual(true);
+          expect(scene.message).toContain('failed    cheap');
+          expect(scene.message).toContain('failed    dear');
+        });
+
+        then(
+          "the last host failed mid-reply, so no earlier host's reason is shown as the last",
+          () => {
+            expect(scene.message).not.toContain('last host fault');
+            expect(scene.hasCause).toEqual(false);
+          },
+        );
+
+        then('the request is not blamed for a mid-reply failure', () => {
+          expect(scene.message).not.toContain('fix the request');
+        });
+
+        then('the message matches snapshot', () => {
+          expect(scene.message).toMatchSnapshot();
+        });
+      });
+    },
+  );
+
   given('[case5] the cheapest endpoint fails for another reason', () => {
     when('[t0] the walk runs', () => {
       then(
@@ -434,6 +657,7 @@ describe('getOneFloorCompletion', () => {
                 queue: QUEUE,
                 attempts: [],
                 retryAfter: null,
+                faultLast: null,
               },
               { openai, sdkOpenRouterEndpoints },
             ),
@@ -441,6 +665,7 @@ describe('getOneFloorCompletion', () => {
           expect(error).toBeInstanceOf(OpenAI.APIError);
           expect(admits.map((p) => p.only)).toEqual([['cheap']]);
           expect(dels).toEqual([]);
+          expect(error.message).toMatchSnapshot(); // the message the caller sees
         },
       );
     });

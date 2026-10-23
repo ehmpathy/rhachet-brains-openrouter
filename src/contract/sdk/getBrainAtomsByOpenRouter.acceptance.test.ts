@@ -13,6 +13,42 @@ import {
 import { getError, given, then, useBeforeAll, useThen, when } from 'test-fns';
 import { z } from 'zod';
 
+import { execFileSync } from 'node:child_process';
+import path from 'node:path';
+import { getOneTierModel } from '../../domain.operations/atom/getOneTierModel';
+import { sdkOpenRouterEndpoints } from '../../domain.operations/supply/sdkOpenRouterEndpoints';
+
+const REPO_ROOT = path.join(__dirname, '../../..');
+
+/**
+ * .what = a consumer's discovery path, as a plain node program
+ * .why = rhachet scans package.json for `rhachet-brains-*` deps and loads each
+ *        via a dynamic `import()`; jest's vm refuses that import, so the probe
+ *        runs outside jest, as a consumer's process would
+ *
+ * .note = the last stdout line is one json object: the slug chosen and the answer
+ */
+const PROBE_DISCOVERY = `
+const { genContextBrain } = require('rhachet');
+const { z } = require('zod');
+(async () => {
+  const { brain } = await genContextBrain({
+    choice: { atom: 'openrouter/deepseek/flash' },
+    creds: async () => ({ OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY }),
+  });
+  const result = await brain.choice.ask({
+    role: {},
+    prompt: 'reply with exactly: hello via discovery',
+    schema: { output: z.string() },
+  });
+  console.log(JSON.stringify({ slug: brain.choice.slug, output: String(result.output) }));
+})().catch((error) => { console.error(error); process.exit(1); });
+`;
+const SCHEMA_PROBE_DISCOVERY = z.object({
+  slug: z.string(),
+  output: z.string(),
+});
+
 /**
  * .what = the openrouter api key, or a loud failure that names the fix
  * .why = every live case below spends real credit; an absent key must fail,
@@ -52,8 +88,7 @@ const genContextOpenRouter = () => ({
 
 /**
  * .what = GET an openrouter api path, as json — test setup only
- * .why = the unlisted id is picked live, and the key's usage is read before
- *        and after a refusal
+ * .why = the unlisted id is picked live
  *
  * .note = each read names the shape it needs; a drifted body fails the test
  *         loud, rather than pass on a field read as `undefined`
@@ -95,10 +130,34 @@ const SCHEMA_MODELS = z.object({
 });
 
 /**
- * .what = the `/key` field the no-spend check reads
- * .why = the key's lifetime usage, in usd
+ * .what = asks a refused ask, and counts the completion sends it made
+ * .why = credit is spent only by a completion send, so zero sends proves the
+ *        key spent no credit. the key's `/key` usage cannot prove it: that is
+ *        one meter for the whole key, and it drifts both ways while earlier
+ *        charges settle (measured: 207.853540386 → 207.853557046 up across a
+ *        refused typo; 207.895409165 → 207.886538656 down across a refused json
+ *        ask, both after a settled read). the spy only observes; every call
+ *        still goes to openrouter
+ *
+ * .note = openai@5 reads the global fetch when its client is built, and the
+ *         atom builds its client inside `ask`, so the spy sees every send
  */
-const SCHEMA_KEY = z.object({ data: z.object({ usage: z.number() }) });
+const getOneSendsOfRefusedAsk = async (input: {
+  ask: () => Promise<unknown>;
+}): Promise<{ error: Error; completionSends: number }> => {
+  const fetchSpy = jest.spyOn(globalThis, 'fetch');
+  try {
+    const error = await getError(input.ask);
+    const completionSends = fetchSpy.mock.calls.filter(([url]) =>
+      String(url instanceof Request ? url.url : url).includes(
+        '/chat/completions',
+      ),
+    ).length;
+    return { error, completionSends };
+  } finally {
+    fetchSpy.mockRestore();
+  }
+};
 
 /**
  * .what = the five tier names this package lists, as literals
@@ -158,6 +217,9 @@ const asStableSupply = (input: {
  * .what = a zero-qualified refusal, with its live counts and rows masked
  * .why = the shape a human reads (headline, funnel promises, fix line) is
  *        computed from the slug; the counts and the endpoint table are live
+ *
+ * .note = the model id is live too, but each caller masks the EXACT id it
+ *         expects, so a refusal that names any other model shows in the snap
  */
 const asStableZeroQualified = (input: { message: string }): string => {
   const lines = input.message.split('\n');
@@ -275,24 +337,19 @@ describe('getBrainAtomsByOpenRouter.acceptance', () => {
   //        for `rhachet-brains-*` deps and calls each `getBrainAtomsBy*` export.
   //        this repo's self-link (`link:.`) is that dependency, so discovery here
   //        reaches the built package exactly as it would in a consumer's repo
-  // .note = skipped by the wisher's call: rhachet loads each brain package via a
-  //         dynamic `import()`, which jest's vm refuses without
-  //         --experimental-vm-modules, so discovery degrades to no brains here.
-  //         the fix is caught in
-  //         .dream/v2026_10_02.fix.acceptance-discovery-under-jest-vm.md
-  given.skip('[case1b] a tier chosen by discovery, as the readme shows', () => {
+  // .note = discovery runs in a plain node child, as a consumer runs it: rhachet
+  //         loads each brain package via a dynamic `import()`, which jest's vm
+  //         refuses without --experimental-vm-modules
+  given('[case1b] a tier chosen by discovery, as the readme shows', () => {
     when('[t0] it is chosen with no brain list, and asked live', () => {
       const scene = useThen('it answers', async () => {
-        const { brain } = await genContextBrain({
-          choice: { atom: 'openrouter/deepseek/flash' },
-          creds: async () => ({ OPENROUTER_API_KEY: getApiKey() }),
-        });
-        const result = await brain.choice.ask({
-          role: {},
-          prompt: 'reply with exactly: hello via discovery',
-          schema: { output: z.string() },
-        });
-        return { slug: brain.choice.slug, output: String(result.output) };
+        const stdout = execFileSync('node', ['-e', PROBE_DISCOVERY], {
+          cwd: REPO_ROOT,
+          timeout: 120_000,
+          env: { ...process.env, OPENROUTER_API_KEY: getApiKey() },
+        }).toString('utf8');
+        const lineLast = stdout.trim().split('\n').pop() ?? '';
+        return SCHEMA_PROBE_DISCOVERY.parse(JSON.parse(lineLast));
       });
 
       then('rhachet found the brain under the name chosen', () => {
@@ -344,6 +401,56 @@ describe('getBrainAtomsByOpenRouter.acceptance', () => {
     });
   });
 
+  // .why = with no `floor`, the whole qualified set is admitted at once and a host
+  //        fault hops to the rest (#21); `attempts` ends on `served` as on the floor
+  // .note = a live run cannot force a host fault, so this snapshot masks the
+  //         trail and reads like [case2]. the hop trail and the exhausted refusal
+  //         a caller reads are pinned at unit grain: getOneAdmittedSetCompletion,
+  //         getOneSuppliedCompletion, and getOneFloorExhaustedError snapshots
+  given('[case2b] the same promises with no floor, asked live', () => {
+    // .note = a composite with no floor is not a listed slug, so it is built by
+    //         `genBrainAtom` from the published package, as case3 builds an id
+    const slug = 'openrouter/deepseek/flash/speed=min50tps&privacy=full';
+
+    when('[t0] it is asked', () => {
+      const result = useThen('it answers', async () =>
+        genBrainAtom({ slug }).ask(
+          {
+            role: {},
+            prompt: 'reply with exactly: hello from the set',
+            schema: { output: z.string() },
+          },
+          genContextOpenRouter(),
+        ),
+      );
+
+      then('the answer carries output', () => {
+        expect(String(result.output).toLowerCase()).toContain('hello');
+      });
+
+      then(
+        'the supply ends on a serve; each hop before it was a host fault',
+        () => {
+          const { supply } = SCHEMA_OUTPUT_SUPPLY.parse(result);
+          expect(supply.provider).toBeTruthy();
+          expect(supply.attempts.at(-1)?.outcome).toEqual('served');
+          supply.attempts
+            .slice(0, -1)
+            .forEach((attempt) =>
+              expect(['throttled', 'refused', 'failed']).toContain(
+                attempt.outcome,
+              ),
+            );
+        },
+      );
+
+      then('the supply report a caller audits matches snapshot', () => {
+        const { supply } = SCHEMA_OUTPUT_SUPPLY.parse(result);
+        expect(asStableSupply({ supply })).toMatchSnapshot();
+      });
+    });
+  });
+
   // .why = "eliminate the need for constant updates": any openrouter id serves
   //        with no release of this package (case=20)
   given('[case3] an id this package has never heard of', () => {
@@ -379,35 +486,64 @@ describe('getBrainAtomsByOpenRouter.acceptance', () => {
     });
   });
 
+  // .why = the control for the no-spend cases: a served ask must count its send,
+  //        else a zero count there could mean the spy is blind
+  given('[case3b] a served ask, through the send counter', () => {
+    when('[t0] it is asked, live', () => {
+      const scene = useThen('it is served', async () => {
+        const fetchSpy = jest.spyOn(globalThis, 'fetch');
+        try {
+          await genBrainAtom({ slug: 'openrouter/deepseek/flash' }).ask(
+            {
+              role: {},
+              prompt: 'reply with exactly: hello',
+              schema: { output: z.string() },
+            },
+            genContextOpenRouter(),
+          );
+          return {
+            completionSends: fetchSpy.mock.calls.filter(([url]) =>
+              String(url instanceof Request ? url.url : url).includes(
+                '/chat/completions',
+              ),
+            ).length,
+          };
+        } finally {
+          fetchSpy.mockRestore();
+        }
+      });
+
+      then('the counter sees at least one completion send', () => {
+        expect(scene.completionSends).toBeGreaterThanOrEqual(1);
+      });
+    });
+  });
+
   given('[case4] a typo of a real id', () => {
     when('[t0] it is asked, live', () => {
       const scene = useThen(
         'it is refused, and the key spends no credit',
         async () => {
-          const usageBefore = (
-            await getOneOpenRouterJson({ path: '/key', schema: SCHEMA_KEY })
-          ).data.usage;
-          const error = await getError(
-            genBrainAtom({ slug: 'openrouter/z-ai/glm-5.3-flahs/floor' }).ask(
-              {
-                role: {},
-                prompt: 'reply with exactly: hello',
-                schema: { output: z.string() },
-              },
-              genContextOpenRouter(),
-            ),
-          );
-          const usageAfter = (
-            await getOneOpenRouterJson({ path: '/key', schema: SCHEMA_KEY })
-          ).data.usage;
+          const { error, completionSends } = await getOneSendsOfRefusedAsk({
+            ask: () =>
+              genBrainAtom({
+                slug: 'openrouter/z-ai/glm-5.3-flahs/floor',
+              }).ask(
+                {
+                  role: {},
+                  prompt: 'reply with exactly: hello',
+                  schema: { output: z.string() },
+                },
+                genContextOpenRouter(),
+              ),
+          });
 
           // .note = return plain data; an Error's `message` is non-enumerable
           //         and does not survive the useThen proxy
           return {
             isConstraint: error instanceof ConstraintError,
             message: error.message,
-            usageBefore,
-            usageAfter,
+            completionSends,
           };
         },
       );
@@ -428,8 +564,8 @@ describe('getBrainAtomsByOpenRouter.acceptance', () => {
         },
       );
 
-      then('the key usage did not move', () => {
-        expect(scene.usageAfter).toEqual(scene.usageBefore);
+      then('no completion is sent, so the key spends no credit', () => {
+        expect(scene.completionSends).toEqual(0);
       });
 
       then('the refusal a human reads matches snapshot', () => {
@@ -475,29 +611,29 @@ describe('getBrainAtomsByOpenRouter.acceptance', () => {
       const scene = useThen(
         'it is refused, and the key spends no credit',
         async () => {
-          const usageBefore = (
-            await getOneOpenRouterJson({ path: '/key', schema: SCHEMA_KEY })
-          ).data.usage;
-          const error = await getError(async () =>
-            genBrainAtom({
-              slug: 'openrouter/deepseek/flash/floor&price.max=0.0001usd/M',
-            }).ask(
-              {
-                role: {},
-                prompt: 'reply with exactly: hello',
-                schema: { output: z.string() },
-              },
-              genContextOpenRouter(),
-            ),
+          const { error, completionSends } = await getOneSendsOfRefusedAsk({
+            ask: () =>
+              genBrainAtom({
+                slug: 'openrouter/deepseek/flash/floor&price.max=0.0001usd/M',
+              }).ask(
+                {
+                  role: {},
+                  prompt: 'reply with exactly: hello',
+                  schema: { output: z.string() },
+                },
+                genContextOpenRouter(),
+              ),
+          });
+          // the same call the ask made: it reads this machine's held pick
+          const modelPicked = await getOneTierModel(
+            { tier: 'openrouter/deepseek/flash', apiKey: getApiKey() },
+            { sdkOpenRouterEndpoints },
           );
-          const usageAfter = (
-            await getOneOpenRouterJson({ path: '/key', schema: SCHEMA_KEY })
-          ).data.usage;
           return {
             isConstraint: error instanceof ConstraintError,
             message: error.message,
-            usageBefore,
-            usageAfter,
+            completionSends,
+            modelPicked,
           };
         },
       );
@@ -508,13 +644,25 @@ describe('getBrainAtomsByOpenRouter.acceptance', () => {
         expect(scene.message).toContain('fix: drop or loosen the promise');
       });
 
-      then('the key usage did not move', () => {
-        expect(scene.usageAfter).toEqual(scene.usageBefore);
+      // .why = the id is live (a tier reaches its line's newest model), so it is
+      //        read from the tier pick the ask itself made, then pinned exactly
+      then('the refusal names the model the tier resolved to', () => {
+        expect(scene.message).toContain(
+          `no endpoint of ${scene.modelPicked} keeps every promise`,
+        );
+      });
+
+      then('no completion is sent, so the key spends no credit', () => {
+        expect(scene.completionSends).toEqual(0);
       });
 
       then('the refusal a human reads matches snapshot', () => {
         expect(
-          asStableZeroQualified({ message: scene.message }),
+          asStableZeroQualified({
+            message: scene.message
+              .split(scene.modelPicked)
+              .join('(a live model id)'),
+          }),
         ).toMatchSnapshot();
       });
     });
@@ -619,27 +767,21 @@ describe('getBrainAtomsByOpenRouter.acceptance', () => {
       const scene = useThen(
         'it is refused, and the key spends no credit',
         async () => {
-          const usageBefore = (
-            await getOneOpenRouterJson({ path: '/key', schema: SCHEMA_KEY })
-          ).data.usage;
-          const error = await getError(async () =>
-            genBrainAtom({ slug: `openrouter/${model.id}/floor` }).ask(
-              {
-                role: {},
-                prompt: 'reply with the single word: pong',
-                schema: { output: z.object({ content: z.string() }) },
-              },
-              genContextOpenRouter(),
-            ),
-          );
-          const usageAfter = (
-            await getOneOpenRouterJson({ path: '/key', schema: SCHEMA_KEY })
-          ).data.usage;
+          const { error, completionSends } = await getOneSendsOfRefusedAsk({
+            ask: () =>
+              genBrainAtom({ slug: `openrouter/${model.id}/floor` }).ask(
+                {
+                  role: {},
+                  prompt: 'reply with the single word: pong',
+                  schema: { output: z.object({ content: z.string() }) },
+                },
+                genContextOpenRouter(),
+              ),
+          });
           return {
             isConstraint: error instanceof ConstraintError,
             message: error.message,
-            usageBefore,
-            usageAfter,
+            completionSends,
           };
         },
       );
@@ -655,8 +797,8 @@ describe('getBrainAtomsByOpenRouter.acceptance', () => {
         },
       );
 
-      then('the key usage did not move', () => {
-        expect(scene.usageAfter).toEqual(scene.usageBefore);
+      then('no completion is sent, so the key spends no credit', () => {
+        expect(scene.completionSends).toEqual(0);
       });
 
       then('the refusal a human reads matches snapshot', () => {

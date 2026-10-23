@@ -1,4 +1,4 @@
-import { promises as fs } from 'fs';
+import { existsSync, promises as fs, readFileSync } from 'fs';
 import { ConstraintError } from 'helpful-errors';
 import OpenAI from 'openai';
 import os from 'os';
@@ -30,6 +30,25 @@ const getApiKey = async (): Promise<string> => {
       hint: 'run: rhx keyrack unlock --owner ehmpath --env test',
     });
   return apiKey;
+};
+
+/**
+ * .what = how long the javascript thread has waited in the cpu run queue, in ms
+ * .why = on a shared host, wall-clock time counts the wait for a free core,
+ *        which other processes set; the kernel reports it apart, per thread
+ *        (/proc/self/task/<tid>/schedstat, field 2, ns). the main thread's tid
+ *        is the pid; /proc/self/schedstat would sum the libuv pool threads too
+ *
+ * .note = read sync, on the thread it measures: an async read would wait on
+ *         the event loop outside the timed window, and count that wait twice
+ * .note = off linux the file is absent, so the wait reads 0 and the bound
+ *         falls back to plain wall-clock time: stricter, never looser
+ */
+const SCHEDSTAT_PATH = `/proc/self/task/${process.pid}/schedstat`;
+const getOneRunQueueWaitMs = (): number => {
+  if (!existsSync(SCHEDSTAT_PATH)) return 0;
+  const schedstat = readFileSync(SCHEDSTAT_PATH, 'utf8');
+  return Number(schedstat.split(' ')[1]) / 1_000_000;
 };
 
 /**
@@ -83,23 +102,40 @@ describe('sdkOpenRouterEndpoints.integration', () => {
           apiKey: apiKey.value,
         });
         const fetchSpy = jest.spyOn(globalThis, 'fetch');
-        const begin = Date.now();
-        await sdkOpenRouterEndpoints.getAllForModel({
-          model: MODEL,
-          apiKey: apiKey.value,
-        });
-        const elapsedMs = Date.now() - begin;
+        const timeOneWarmRead = async (): Promise<number> => {
+          const queueBefore = getOneRunQueueWaitMs();
+          const wallBefore = Date.now();
+          await sdkOpenRouterEndpoints.getAllForModel({
+            model: MODEL,
+            apiKey: apiKey.value,
+          });
+          const wallMs = Date.now() - wallBefore;
+          const queueMs = getOneRunQueueWaitMs() - queueBefore;
+          return wallMs - queueMs;
+        };
+        // reads in sequence, so each is timed alone
+        const timeWarmReads = async (count: number): Promise<number[]> =>
+          count === 0
+            ? []
+            : [await timeOneWarmRead(), ...(await timeWarmReads(count - 1))];
+        const activeMsAll = await timeWarmReads(10);
         const fetchCalls = fetchSpy.mock.calls.length;
         fetchSpy.mockRestore();
-        return { elapsedMs, fetchCalls };
+        return { activeMsSlowest: Math.max(...activeMsAll), fetchCalls };
       });
 
       then('no network read is made', () => {
         expect(scene.fetchCalls).toEqual(0);
       });
 
-      then('the read returns within 50ms', () => {
-        expect(scene.elapsedMs).toBeLessThan(50);
+      // .why = a warm read returns within 50ms, on every read of ten. the time
+      //        counted is wall-clock less the time the thread sat in the cpu run
+      //        queue: on a shared host that wait is other processes' load (load
+      //        average 73 on 12 cores measured 2026-10-23, `setTimeout(0)` late by
+      //        up to 31ms) and no property of the cache. a slow read or an i/o stall
+      //        still counts in full, since a thread that waits on i/o is not queued
+      then('every warm read returns within 50ms', () => {
+        expect(scene.activeMsSlowest).toBeLessThan(50);
       });
     });
 
