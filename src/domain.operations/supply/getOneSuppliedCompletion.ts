@@ -84,11 +84,21 @@ export const getOneSuppliedCompletion = async (
           queue: qualified,
           attempts: [],
           retryAfter: null,
+          faultLast: null,
         },
         context,
       )
     : await getOneAdmittedSetCompletion(
-        { request: input.request, filters: input.filters, qualified },
+        {
+          model: input.model,
+          request: input.request,
+          filters: input.filters,
+          expectsJson: input.expectsJson,
+          qualified,
+          attempts: [],
+          retryAfter: null,
+          faultLast: null,
+        },
         context,
       );
 
@@ -116,7 +126,8 @@ export const getOneSuppliedCompletion = async (
     supply: {
       provider: facts.provider,
       generationId: facts.generationId,
-      attempts,
+      // each endpoint tried, in order; the last one served, in both supply modes
+      attempts: [...attempts, { tag: served.tag, outcome: 'served' }],
       choice: {
         tokensEstimate,
         funnel,

@@ -57,9 +57,13 @@ const asSupply = (output: unknown): SupplyReport =>
 const asStableSupply = (input: { supply: SupplyReport }) => ({
   provider: input.supply.provider ? '(live host)' : null,
   generationId: input.supply.generationId ? '(live id)' : null,
-  attempts: input.supply.attempts.length
-    ? `(live hops; last = ${input.supply.attempts.at(-1)?.outcome})`
-    : [],
+  // .note = a live host fault adds a hop on either path, so the count moves per
+  //         call; the snapshot keeps the one fact that holds: the trail ends on
+  //         the serve, in both supply modes
+  attempts:
+    input.supply.attempts.at(-1)?.outcome === 'served'
+      ? '(live hops; last = served)'
+      : '(live hops; last not served)',
   choice: input.supply.choice
     ? {
         tokensEstimate: input.supply.choice.tokensEstimate,
@@ -75,7 +79,11 @@ const asStableSupply = (input: { supply: SupplyReport }) => ({
 });
 
 describe('genBrainAtom.supply.integration', () => {
-  jest.setTimeout(90000);
+  // .why = a live ask may meet a throttled host: the openai client retries it twice, each
+  //        wait up to 60s of `retry-after`, before the hop (readme § host faults). the cap
+  //        covers that documented worst case plus the serve, so a throttle under suite load
+  //        reads as the contract, not a timeout
+  jest.setTimeout(180_000);
 
   given(
     '[case1] the agreed reviewer floor: floor&speed=min50tps&privacy=full',
@@ -311,10 +319,22 @@ describe('genBrainAtom.supply.integration', () => {
         },
       );
 
-      then('an admitted host served, with no walk', () => {
+      // .why = a live host may throttle or fail; the set then hops past it (#21).
+      //        a marked fault that names no admitted host falls to the floor
+      //        walk, which steps past a host that answers a json ask in prose.
+      //        so the trail may hold hops, yet each before the serve must be a
+      //        step the contract names (FloorAttempt), and the last row is the serve
+      then('an admitted host served; any hop was past a host fault', () => {
         const supply = asSupply(result);
         expect(supply.provider).toBeTruthy();
-        expect(supply.attempts).toEqual([]);
+        expect(supply.attempts.at(-1)?.outcome).toEqual('served');
+        supply.attempts
+          .slice(0, -1)
+          .forEach((attempt) =>
+            expect(['throttled', 'refused', 'failed', 'prose']).toContain(
+              attempt.outcome,
+            ),
+          );
         expect(supply.choice?.funnel.map((f) => f.promise)).toContain(
           'privacy=full (zdr list)',
         );
@@ -326,6 +346,16 @@ describe('genBrainAtom.supply.integration', () => {
           (row) => row.verdict === 'qualified',
         );
         expect(qualified.length).toBeGreaterThan(1);
+      });
+
+      // .why = each qualified endpoint is on the trail at most once, the serve
+      //        included, so a served ask never outgrows the admitted set
+      then('the hops never exhausted the admitted set', () => {
+        const supply = asSupply(result);
+        const qualified = (supply.choice?.ranked ?? []).filter(
+          (row) => row.verdict === 'qualified',
+        );
+        expect(supply.attempts.length).toBeLessThanOrEqual(qualified.length);
       });
 
       then('the supply report a caller audits matches snapshot', () => {

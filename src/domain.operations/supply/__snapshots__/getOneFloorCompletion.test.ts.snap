@@ -1,7 +1,59 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
+exports[`getOneFloorCompletion given: [case1] the cheapest endpoint serves when: [t0] the walk runs then: the sends and the trail match snapshot 1`] = `
+{
+  "attempts": [],
+  "sends": [
+    [
+      "cheap",
+    ],
+  ],
+  "servedTag": "cheap",
+}
+`;
+
+exports[`getOneFloorCompletion given: [case2] the cheapest endpoint throttles (case=21) when: [t0] the walk runs then: the sends and the trail match snapshot 1`] = `
+{
+  "attempts": [
+    {
+      "outcome": "throttled",
+      "tag": "cheap",
+    },
+  ],
+  "sends": [
+    [
+      "cheap",
+    ],
+    [
+      "mid",
+    ],
+  ],
+  "servedTag": "mid",
+}
+`;
+
+exports[`getOneFloorCompletion given: [case3] the cheapest endpoint is refused as absent (case=13 [t2]) when: [t0] the walk runs then: the sends and the trail match snapshot 1`] = `
+{
+  "attempts": [
+    {
+      "outcome": "refused",
+      "tag": "cheap",
+    },
+  ],
+  "sends": [
+    [
+      "cheap",
+    ],
+    [
+      "mid",
+    ],
+  ],
+  "servedTag": "mid",
+}
+`;
+
 exports[`getOneFloorCompletion given: [case4] every qualified endpoint throttles, refuses, or fails when: [t0] the walk runs then: the message matches snapshot 1`] = `
-"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed mid-reply, or answered prose where json was owed. no answer was returned.
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), or answered prose where json was owed. no answer was returned.
 
   throttled cheap
   refused   mid
@@ -25,6 +77,81 @@ fix: retry after 7s (openrouter's retry-after), or loosen a promise so more endp
       "outcome": "failed"
     }
   ],
-  "retryAfter": "7"
+  "retryAfter": "7",
+  "faultReasonLast": null
+}"
+`;
+
+exports[`getOneFloorCompletion given: [case5] the cheapest endpoint fails for another reason when: [t0] the walk runs then: the error rethrows untouched, and no other endpoint is tried 1`] = `"500 host error from cheap"`;
+
+exports[`getOneFloorCompletion given: [case8] the cheapest endpoint answers prose where json is owed (F31) when: [t0] the walk runs a json ask then: the sends and the trail match snapshot 1`] = `
+{
+  "attempts": [
+    {
+      "outcome": "prose",
+      "tag": "cheap",
+    },
+  ],
+  "sends": [
+    [
+      "cheap",
+    ],
+    [
+      "mid",
+    ],
+  ],
+  "servedTag": "mid",
+}
+`;
+
+exports[`getOneFloorCompletion given: [case9] the cheapest endpoint returns a host 400 when: [t0] the walk runs then: the sends and the trail match snapshot 1`] = `
+{
+  "attempts": [
+    {
+      "outcome": "failed",
+      "tag": "cheap",
+    },
+  ],
+  "sends": [
+    [
+      "cheap",
+    ],
+    [
+      "mid",
+    ],
+  ],
+  "servedTag": "mid",
+}
+`;
+
+exports[`getOneFloorCompletion given: [case10] the cheapest endpoint returns the caller's own 400 when: [t0] the walk runs then: the error rethrows untouched, and no other endpoint is tried 1`] = `"400 messages: field required"`;
+
+exports[`getOneFloorCompletion given: [case12] a host 400 names a reason, then the later hosts fail mid-reply when: [t0] the walk runs then: the message matches snapshot 1`] = `
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), or answered prose where json was owed. no answer was returned.
+
+  failed    cheap
+  failed    mid
+  failed    dear
+
+fix: retry later, or loosen a promise so more endpoints qualify.
+
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "attempts": [
+    {
+      "tag": "cheap",
+      "outcome": "failed"
+    },
+    {
+      "tag": "mid",
+      "outcome": "failed"
+    },
+    {
+      "tag": "dear",
+      "outcome": "failed"
+    }
+  ],
+  "retryAfter": null,
+  "faultReasonLast": null
 }"
 `;

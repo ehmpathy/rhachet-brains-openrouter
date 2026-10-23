@@ -1,8 +1,9 @@
 import { MalfunctionError } from 'helpful-errors';
-import type OpenAI from 'openai';
-import { getError } from 'test-fns';
+import OpenAI from 'openai';
+import { getError, given, then, useThen, when } from 'test-fns';
 
 import type { OpenRouterEndpoint } from '../../domain.objects/OpenRouterEndpoint';
+import { getOneAskErrorNamed } from '../atom/getOneAskErrorNamed';
 import { asSupplyFilters } from './asSupplyFilters';
 import { getOneSuppliedCompletion } from './getOneSuppliedCompletion';
 
@@ -163,11 +164,14 @@ describe('getOneSuppliedCompletion', () => {
       allow_fallbacks: false,
       zdr: true,
     });
-    expect(result.supply.attempts).toEqual([]);
+    expect(result.supply.attempts).toEqual([
+      { tag: 'dear', outcome: 'served' },
+    ]); // the last attempt served, in both supply modes
     expect(result.supply.choice?.ranked.map((row) => row.tag)).toEqual([
       'cheap',
       'dear',
     ]);
+    expect(result.supply).toMatchSnapshot(); // the report a caller audits, first-try serve, no floor
   });
 
   test('a floor ask admits the cheapest qualified endpoint alone', async () => {
@@ -188,6 +192,7 @@ describe('getOneSuppliedCompletion', () => {
     expect(result.supply.attempts).toEqual([
       { tag: 'cheap', outcome: 'served' },
     ]);
+    expect(result.supply).toMatchSnapshot(); // the report a caller audits, first-try serve, floor
   });
 
   // 🔴 .why = i002: a spread of the reply's extras leaked `errorMessage` into the
@@ -264,5 +269,244 @@ describe('getOneSuppliedCompletion', () => {
       expect(error.message).toContain(thisCase.expect.contains);
       expect(error.message).not.toContain('served from');
     }),
+  );
+});
+
+/**
+ * .what = a fake openai client that routes each send to the first admitted tag
+ *         and answers per that host: a served reply, or openrouter's host error
+ * .why = the hop must be seen end to end through the supply, as `brain.ask`
+ *        composes it: the served check reads the final admitted set, and the
+ *        report and the exhausted error are what a caller receives
+ *
+ * .note = the errors are the real `OpenAI.APIError`; the body is openrouter's
+ *         host-error shape, captured live 2026-10-21 (see asHostFault.test.ts)
+ */
+const genOpenAiFakeByHost = (input: {
+  behaviorByTag: Record<
+    string,
+    { serve: string } | { status: number; raw: string; retryAfter: string }
+  >;
+}) => {
+  const admits: string[][] = [];
+  const openai = {
+    chat: {
+      completions: {
+        create: async (request: { provider: { only: string[] } }) => {
+          admits.push(request.provider.only);
+          const tag = request.provider.only[0]!;
+          const behavior = input.behaviorByTag[tag];
+          if (!behavior)
+            throw new Error(`fake: no behavior declared for tag ${tag}`); // a fixture defect, never a host fault
+          if ('serve' in behavior)
+            return {
+              id: `gen-${tag}`,
+              provider: behavior.serve,
+              usage: { cost: 0.00001 },
+              choices: [
+                {
+                  index: 0,
+                  finish_reason: 'stop',
+                  message: { role: 'assistant', content: 'hi' },
+                },
+              ],
+            };
+          throw new OpenAI.APIError(
+            behavior.status,
+            {
+              message: 'Provider returned error',
+              code: behavior.status,
+              metadata: {
+                provider_name: ENDPOINTS.find((e) => e.tag === tag)!
+                  .providerName,
+                raw: behavior.raw,
+              },
+            },
+            undefined,
+            new Headers({ 'retry-after': behavior.retryAfter }),
+          );
+        },
+      },
+    },
+  } as unknown as OpenAI; // .note = a fake with only the one method the supply calls. removal: when the context declares that one method as its own structural type, the fake fits with no cast
+  return { openai, admits };
+};
+
+describe('getOneSuppliedCompletion, a host fault on the admitted set (#21)', () => {
+  given('[case1] the cheaper admitted host throttles, the other serves', () => {
+    when('[t0] a filtered ask with no floor is supplied', () => {
+      const scene = useThen('it serves', async () => {
+        const { openai, admits } = genOpenAiFakeByHost({
+          behaviorByTag: {
+            cheap: {
+              status: 429,
+              raw: '{"error":{"message":"rate limited upstream"}}',
+              retryAfter: '7',
+            },
+            dear: { serve: 'Dear' },
+          },
+        });
+        const result = await getOneSuppliedCompletion(
+          {
+            apiKey: 'fake',
+            model: REQUEST.model,
+            request: REQUEST,
+            filters: asSupplyFilters({ segment: 'privacy=full' }),
+            paramsRequired: [],
+            expectsJson: false,
+          },
+          { openai, sdkOpenRouterEndpoints: genSdkFake() },
+        );
+        return { supply: result.supply, admits };
+      });
+
+      then('the re-send excludes the throttled host', () => {
+        expect(scene.admits).toEqual([['cheap', 'dear'], ['dear']]);
+      });
+
+      then('the served check accepts the host left in the set', () => {
+        expect(scene.supply.provider).toEqual('Dear');
+      });
+
+      then('the report names the hop, then the serve', () => {
+        expect(scene.supply.attempts).toEqual([
+          { tag: 'cheap', outcome: 'throttled' },
+          { tag: 'dear', outcome: 'served' },
+        ]);
+      });
+
+      then('the supply report a caller audits matches snapshot', () => {
+        expect(scene.supply).toMatchSnapshot();
+      });
+    });
+  });
+
+  // .why = the floor walk returns only the steps it passed over; the supply
+  //        appends the serve. so the full floor trail is proven here, composed
+  given(
+    '[case1b] on the floor, the cheapest host throttles, the next serves',
+    () => {
+      when('[t0] a floor ask is supplied', () => {
+        const scene = useThen('it serves', async () => {
+          const { openai, admits } = genOpenAiFakeByHost({
+            behaviorByTag: {
+              cheap: {
+                status: 429,
+                raw: '{"error":{"message":"rate limited upstream"}}',
+                retryAfter: '7',
+              },
+              dear: { serve: 'Dear' },
+            },
+          });
+          const result = await getOneSuppliedCompletion(
+            {
+              apiKey: 'fake',
+              model: REQUEST.model,
+              request: REQUEST,
+              filters: asSupplyFilters({ segment: 'floor' }),
+              paramsRequired: [],
+              expectsJson: false,
+            },
+            { openai, sdkOpenRouterEndpoints: genSdkFake() },
+          );
+          return { supply: result.supply, admits };
+        });
+
+        then('the walk sends to the cheapest host, then the next', () => {
+          expect(scene.admits).toEqual([['cheap'], ['dear']]);
+        });
+
+        then('the report names the throttle, then the serve', () => {
+          expect(scene.supply.attempts).toEqual([
+            { tag: 'cheap', outcome: 'throttled' },
+            { tag: 'dear', outcome: 'served' },
+          ]);
+        });
+
+        then('the supply report a caller audits matches snapshot', () => {
+          expect(scene.supply).toMatchSnapshot();
+        });
+      });
+    },
+  );
+
+  // .why = a host can reject the caller's own request (a prompt over its context
+  //        window) under openrouter's host marker; the caller must read that
+  //        reason, not only "retry later"
+  given(
+    '[case2] every admitted host faults, the last on the request itself',
+    () => {
+      when('[t0] the error is named as `brain.ask` names it', () => {
+        const scene = useThen('it fails loud', async () => {
+          const { openai } = genOpenAiFakeByHost({
+            behaviorByTag: {
+              cheap: {
+                status: 429,
+                raw: '{"error":{"message":"rate limited upstream"}}',
+                retryAfter: '7',
+              },
+              dear: {
+                status: 400,
+                raw: '{"error":{"message":"This endpoint\'s maximum context length is 163840 tokens. However, you requested about 201234 tokens."}}',
+                retryAfter: '',
+              },
+            },
+          });
+          const error = await getError(
+            getOneSuppliedCompletion(
+              {
+                apiKey: 'fake',
+                model: REQUEST.model,
+                request: REQUEST,
+                filters: asSupplyFilters({ segment: 'privacy=full' }),
+                paramsRequired: [],
+                expectsJson: false,
+              },
+              { openai, sdkOpenRouterEndpoints: genSdkFake() },
+            ),
+          );
+          const named = await getOneAskErrorNamed(
+            {
+              error,
+              model: REQUEST.model,
+              filterSuffix: '/privacy=full',
+              apiKey: 'fake',
+            },
+            {
+              sdkOpenRouterEndpoints: {
+                getAllCatalogModels: async () => {
+                  throw new Error('fake: the catalog is read only for a 404');
+                },
+              },
+            },
+          );
+          // .note = plain data; an Error's message does not survive the proxy
+          return {
+            isMalfunction: named instanceof MalfunctionError,
+            message: named instanceof Error ? named.message : String(named),
+          };
+        });
+
+        then('the caller receives the exhausted MalfunctionError', () => {
+          expect(scene.isMalfunction).toEqual(true);
+        });
+
+        then("it shows the last host's own reason", () => {
+          expect(scene.message).toContain(
+            "last host fault: This endpoint's maximum context length is 163840 tokens.",
+          );
+        });
+
+        then('it says to fix the request before a retry', () => {
+          expect(scene.message).toContain(
+            'fix the request; else retry after 7s',
+          );
+        });
+
+        then('the message the caller sees matches snapshot', () => {
+          expect(scene.message).toMatchSnapshot();
+        });
+      });
+    },
   );
 });

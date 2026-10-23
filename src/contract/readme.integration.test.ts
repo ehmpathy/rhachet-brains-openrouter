@@ -76,6 +76,39 @@ describe('readme', () => {
     });
   });
 
+  // .why = a caller reads `supply.attempts` per the readme; both modes end the
+  //        trail on the serve, so a readme that says otherwise sends the caller
+  //        to misread which host served (#21). each phrase is one line, so a
+  //        reflow of the paragraph never turns this red
+  given('[case4] the supply report and host faults', () => {
+    when('[t0] the readme is read', () => {
+      then('it says the last attempt is the serve, in both modes', () => {
+        expect(README).toContain('in both supply modes');
+        expect(README).toContain('marked `served`');
+      });
+
+      then('it reads `attempts` per supply mode', () => {
+        expect(README).toContain('- **floor** — one row per endpoint tried');
+        expect(README).toContain(
+          '- **no floor** — one row per endpoint dropped after a host fault',
+        );
+      });
+
+      then('it says both modes step past a host fault', () => {
+        expect(README).toContain('### host faults');
+        expect(README).toContain('both modes step past a host that faults');
+      });
+
+      then("it says openrouter's own 429 rethrows untouched (c9)", () => {
+        expect(README).toContain('rethrows untouched after one send');
+      });
+
+      then("it states the client's own retries wait out retry-after", () => {
+        expect(README).toContain('up to 60s each');
+      });
+    });
+  });
+
   // .why = the tier table is what a caller reads to learn which names they may
   //        choose; a tier added or dropped without the readme goes red here
   given('[case2] the tier table', () => {

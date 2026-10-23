@@ -83,23 +83,31 @@ describe('sdkOpenRouterEndpoints.integration', () => {
           apiKey: apiKey.value,
         });
         const fetchSpy = jest.spyOn(globalThis, 'fetch');
-        const begin = Date.now();
+        const cpuBefore = process.cpuUsage();
         await sdkOpenRouterEndpoints.getAllForModel({
           model: MODEL,
           apiKey: apiKey.value,
         });
-        const elapsedMs = Date.now() - begin;
+        const cpuSpent = process.cpuUsage(cpuBefore);
         const fetchCalls = fetchSpy.mock.calls.length;
         fetchSpy.mockRestore();
-        return { elapsedMs, fetchCalls };
+        return {
+          warmCpuMs: (cpuSpent.user + cpuSpent.system) / 1000,
+          fetchCalls,
+        };
       });
 
       then('no network read is made', () => {
         expect(scene.fetchCalls).toEqual(0);
       });
 
-      then('the read returns within 50ms', () => {
-        expect(scene.elapsedMs).toBeLessThan(50);
+      // .why = the bound is 50ms of the read's own cpu, not wall-clock time. the cache
+      //        lives on disk, so a warm read is a file read and a parse. wall-clock time
+      //        measured the host's load: 329ms for one read, then 57ms for the fastest
+      //        of five, each while parallel suites shared the cpu, and under 50ms alone.
+      //        cpu time counts only the work this read does, so a slow cache still fails
+      then('the read costs under 50ms of cpu', () => {
+        expect(scene.warmCpuMs).toBeLessThan(50);
       });
     });
 
