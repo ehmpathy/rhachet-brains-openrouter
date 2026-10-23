@@ -81,7 +81,9 @@ the report must name them, and the vision cell c14 had to pick one shape for bot
 
 **lean: A.** one rule for both modes, and the trail alone tells the whole story of an ask. the
 live [case6] check reads "the last row is served; each row before it is a step `FloorAttempt`
-names", since a live host may throttle and a live suite cannot promise no hop. rework to B is clean
+names", since a live host may throttle and a live suite cannot promise no hop. its [t1] ties the
+trail to the completion sends: a recorded hop with one fetch goes red, so a phantom hop on every
+ask cannot pass. the unit grain asserts each exact trail. record: F15. rework to B is clean
 (the composer's one append line, and the tests revert).
 
 ### Q2 — what does the exhausted refusal call a host 400?
@@ -109,7 +111,7 @@ with no defect in the code. no design decision rides on these.
 |---|---|---|---|
 | acceptance no-spend cases ([case4] typo, [case6] zero-qualified, [case9] json-schema) | a refused ask spends no credit | the key's `/key` usage before vs after: one meter for the whole key; it moved 198.067 → 198.042, 207.853540 → 207.853557, and 207.895 → 207.887 across refused asks with no send, even after a settled read | the `/chat/completions` sends of the ask, via a `fetch` spy (observe only), `toEqual(0)`; control [case3b] asserts a served ask counts `≥ 1`, so a blind spy goes red |
 | acceptance zero-qualified refusal snapshot | the refusal names the model the tier resolved to | the exact id `deepseek/deepseek-v4.1-flash` in the snapshot; openrouter shipped `-1017` and the snapshot broke with no change here | the id masked in the snapshot, plus a `toMatch` that the headline names a deepseek flash model |
-| `sdkOpenRouterEndpoints.integration.test.ts` [case2] | a warm read is cheap and makes no network read | 50ms of wall-clock on a disk-cache read: 329ms for one read, then 57ms for the fastest of five, under parallel suites; under 50ms alone | 50ms of the read's own cpu (`process.cpuUsage`), one read, plus `fetchCalls === 0` |
+| `sdkOpenRouterEndpoints.integration.test.ts` [case2] | a warm read is cheap and makes no network read | 50ms of wall-clock on a disk-cache read: 329ms for one read, then 57ms for the fastest of five, under parallel suites; under 50ms alone | wall-clock under 50ms on the fastest of ten reads spaced 200ms apart (a slow cache or a stalled disk slows all ten; a load spike covers none), plus cpu (`process.cpuUsage`) under 50ms on every read, plus `fetchCalls === 0` (F18) |
 
 ## the vision catalog changed with the code
 
@@ -148,9 +150,11 @@ retry cut is a separate latency change with no measurement yet, and 5xx is not y
   plain `node` child, since jest's vm refuses rhachet's dynamic `import()`
 - acceptance `[case2b]` — a no-floor composite asked live; its supply report is snapped beside
   the floor's
-- `getOneSuppliedCompletion.test.ts` [case1b] — the composed floor trail, throttle then serve
+- `getOneSuppliedCompletion.test.ts` [case1b–e] — the composed floor trail: a throttle, a refusal
+  (404), a host 400, and a json ask answered in prose, each then the serve
+- `genBrainAtom.supply.integration.test.ts` [case6] [t1] — the live trail under a send counter
 - full suite on the final tree, `rhx git.repo.test --what all --against local --env test --mode apply --thorough`,
-  exit 0: unit 452, integration 156, acceptance 61 passed, 0 skipped; types, lint, format pass
+  exit 0: unit 461, integration 160, acceptance 61 passed, 0 skipped; types, lint, format pass
 
 ## deferred, as dreams
 
@@ -167,5 +171,7 @@ retry cut is a separate latency change with no measurement yet, and 5xx is not y
   ehmpathy 1.39.1 → 1.39.7
 - `.claude` retargeted to `.agent/.actors/actor.via.repo=ambient/`; `.gitignore` and
   `.depcheckrc.yml` follow
+- `.gitignore` holds `.patch` and `.radio`: machine-local state (a held pnpm patch, a radio-queue
+  symlink) that must never land in a commit
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)

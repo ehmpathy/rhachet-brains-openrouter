@@ -362,6 +362,51 @@ describe('genBrainAtom.supply.integration', () => {
         expect(asStableSupply({ supply: asSupply(result) })).toMatchSnapshot();
       });
     });
+
+    // .why = the exact trail, tied to the sends that made it. one completion fetch
+    //        means one send and no client retry, so the trail must be exactly one
+    //        served row; a hop the trail records must show as more than one fetch
+    // .note = the spy only observes; every send still goes to openrouter.
+    //         openai@5 reads the global fetch when the atom builds its client
+    when('[t1] asked under a send counter', () => {
+      const scene = useThen('it answers', async () => {
+        const fetchSpy = jest.spyOn(globalThis, 'fetch');
+        try {
+          const answer = await atom.ask(
+            { role: {}, prompt, schema: { output: outputSchema } },
+            context,
+          );
+          const completionFetches = fetchSpy.mock.calls.filter(([url]) =>
+            String(url instanceof Request ? url.url : url).includes(
+              '/chat/completions',
+            ),
+          ).length;
+          return { attempts: asSupply(answer).attempts, completionFetches };
+        } finally {
+          fetchSpy.mockRestore();
+        }
+      });
+
+      then('the counter sees at least one completion send', () => {
+        expect(scene.completionFetches).toBeGreaterThanOrEqual(1);
+      });
+
+      // .note = an implication, not an equality: the client may retry a send with
+      //         no hop (more fetches, one row), and one hop send may drop several
+      //         endpoints of one provider (more rows than hop sends, vision c16)
+      then(
+        'the trail ends on the serve, and a hop came with more than one fetch',
+        () => {
+          expect(scene.attempts.at(-1)?.outcome).toEqual('served');
+          const isHopRecorded = scene.attempts.length > 1;
+          const isFetchedMoreThanOnce = scene.completionFetches > 1;
+          expect({ isHopRecorded, isFetchedMoreThanOnce }).not.toEqual({
+            isHopRecorded: true,
+            isFetchedMoreThanOnce: false,
+          });
+        },
+      );
+    });
   });
 
   // .why = `precision=` sends openrouter's native `quantizations` field beside the

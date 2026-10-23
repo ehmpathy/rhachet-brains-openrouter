@@ -285,7 +285,8 @@ describe('getOneSuppliedCompletion', () => {
 const genOpenAiFakeByHost = (input: {
   behaviorByTag: Record<
     string,
-    { serve: string } | { status: number; raw: string; retryAfter: string }
+    | { serve: string; content?: string }
+    | { status: number; raw: string; retryAfter: string }
   >;
 }) => {
   const admits: string[][] = [];
@@ -307,7 +308,10 @@ const genOpenAiFakeByHost = (input: {
                 {
                   index: 0,
                   finish_reason: 'stop',
-                  message: { role: 'assistant', content: 'hi' },
+                  message: {
+                    role: 'assistant',
+                    content: behavior.content ?? 'hi',
+                  },
                 },
               ],
             };
@@ -428,6 +432,79 @@ describe('getOneSuppliedCompletion, a host fault on the admitted set (#21)', () 
         });
       });
     },
+  );
+
+  // .why = each other step the floor walk takes must compose with the serve the
+  //        supply appends, as the throttle does in [case1b]
+  [
+    {
+      caseName:
+        '[case1c] on the floor, the cheapest host refuses (404), the next serves',
+      cheap: {
+        status: 404,
+        raw: '{"error":{"message":"no endpoint found"}}',
+        retryAfter: '',
+      },
+      expectsJson: false,
+      outcome: 'refused',
+    },
+    {
+      caseName:
+        '[case1d] on the floor, the cheapest host fails (host 400), the next serves',
+      cheap: {
+        status: 400,
+        raw: '{"error":{"message":"maximum context length exceeded"}}',
+        retryAfter: '',
+      },
+      expectsJson: false,
+      outcome: 'failed',
+    },
+    {
+      caseName:
+        '[case1e] on the floor, the cheapest host answers a json ask in prose, the next serves',
+      cheap: { serve: 'Cheap', content: 'hi there' },
+      expectsJson: true,
+      outcome: 'prose',
+    },
+  ].map((thisCase) =>
+    given(thisCase.caseName, () => {
+      when('[t0] a floor ask is supplied', () => {
+        const scene = useThen('it serves', async () => {
+          const { openai, admits } = genOpenAiFakeByHost({
+            behaviorByTag: {
+              cheap: thisCase.cheap,
+              dear: { serve: 'Dear', content: '{"ok":true}' },
+            },
+          });
+          const result = await getOneSuppliedCompletion(
+            {
+              apiKey: 'fake',
+              model: REQUEST.model,
+              request: REQUEST,
+              filters: asSupplyFilters({ segment: 'floor' }),
+              paramsRequired: thisCase.expectsJson ? ['response_format'] : [],
+              expectsJson: thisCase.expectsJson,
+            },
+            { openai, sdkOpenRouterEndpoints: genSdkFake() },
+          );
+          return { supply: result.supply, admits };
+        });
+
+        then('the walk sends to the cheapest host, then the next', () => {
+          expect(scene.admits).toEqual([['cheap'], ['dear']]);
+        });
+
+        then(
+          `the report names the ${thisCase.outcome} step, then the serve`,
+          () => {
+            expect(scene.supply.attempts).toEqual([
+              { tag: 'cheap', outcome: thisCase.outcome },
+              { tag: 'dear', outcome: 'served' },
+            ]);
+          },
+        );
+      });
+    }),
   );
 
   // .why = a host can reject the caller's own request (a prompt over its context

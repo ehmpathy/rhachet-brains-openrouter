@@ -83,16 +83,32 @@ describe('sdkOpenRouterEndpoints.integration', () => {
           apiKey: apiKey.value,
         });
         const fetchSpy = jest.spyOn(globalThis, 'fetch');
-        const cpuBefore = process.cpuUsage();
-        await sdkOpenRouterEndpoints.getAllForModel({
-          model: MODEL,
-          apiKey: apiKey.value,
-        });
-        const cpuSpent = process.cpuUsage(cpuBefore);
+        type WarmRead = { wallMs: number; cpuMs: number };
+        const timeOneWarmRead = async (): Promise<WarmRead> => {
+          await new Promise((done) => setTimeout(done, 200));
+          const wallBefore = Date.now();
+          const cpuBefore = process.cpuUsage();
+          await sdkOpenRouterEndpoints.getAllForModel({
+            model: MODEL,
+            apiKey: apiKey.value,
+          });
+          const cpuSpent = process.cpuUsage(cpuBefore);
+          return {
+            wallMs: Date.now() - wallBefore,
+            cpuMs: (cpuSpent.user + cpuSpent.system) / 1000,
+          };
+        };
+        // reads in sequence, so each is timed alone
+        const timeWarmReads = async (count: number): Promise<WarmRead[]> =>
+          count === 0
+            ? []
+            : [await timeOneWarmRead(), ...(await timeWarmReads(count - 1))];
+        const reads = await timeWarmReads(10);
         const fetchCalls = fetchSpy.mock.calls.length;
         fetchSpy.mockRestore();
         return {
-          warmCpuMs: (cpuSpent.user + cpuSpent.system) / 1000,
+          wallMsFastest: Math.min(...reads.map((read) => read.wallMs)),
+          cpuMsSlowest: Math.max(...reads.map((read) => read.cpuMs)),
           fetchCalls,
         };
       });
@@ -101,13 +117,20 @@ describe('sdkOpenRouterEndpoints.integration', () => {
         expect(scene.fetchCalls).toEqual(0);
       });
 
-      // .why = the bound is 50ms of the read's own cpu, not wall-clock time. the cache
-      //        lives on disk, so a warm read is a file read and a parse. wall-clock time
-      //        measured the host's load: 329ms for one read, then 57ms for the fastest
-      //        of five, each while parallel suites shared the cpu, and under 50ms alone.
-      //        cpu time counts only the work this read does, so a slow cache still fails
-      then('the read costs under 50ms of cpu', () => {
-        expect(scene.warmCpuMs).toBeLessThan(50);
+      // .why = a warm read returns within 50ms of wall-clock time. the cache lives on
+      //        disk, and the wall clock also counts the host's load: one read took
+      //        329ms, then the fastest of five back-to-back reads 57ms, each while
+      //        parallel suites shared the cpu, and under 50ms alone. so ten reads are
+      //        spaced 200ms apart, which no brief spike covers. a slow cache or a
+      //        stalled disk slows all ten, so the fastest still fails
+      then('a warm read returns within 50ms', () => {
+        expect(scene.wallMsFastest).toBeLessThan(50);
+      });
+
+      // .why = the cpu clock counts only this read's own work, so load cannot move
+      //        it; it holds on every read, the slowest included
+      then('every warm read costs under 50ms of cpu', () => {
+        expect(scene.cpuMsSlowest).toBeLessThan(50);
       });
     });
 
