@@ -174,5 +174,3 @@ retry cut is a separate latency change with no measurement yet, and 5xx is not y
   `.depcheckrc.yml` follow
 - `.gitignore` holds `.patch` and `.radio`: machine-local state (a held pnpm patch, a radio-queue
   symlink) that must never land in a commit
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
