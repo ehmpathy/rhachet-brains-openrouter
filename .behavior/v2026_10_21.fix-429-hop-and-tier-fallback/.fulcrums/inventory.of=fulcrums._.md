@@ -18,5 +18,5 @@
 | F14 | [the refusal's new lines say "host"; its extant headline and rows say "endpoint"](./inventory.of=fulcrums.case=F14-refusal-says-host-beside-extant-endpoint.md) | clean | best-guessed | 75% |
 | F15 | [`supply.attempts` ends on a served row in both modes (vision c14)](./inventory.of=fulcrums.case=F15-attempts-ends-on-served.md) | clean | open — commander (pr Q1) | 75% |
 | F16 | [a refused ask's "no spend" is proved by a count of completion sends](./inventory.of=fulcrums.case=F16-no-spend-proved-by-send-count.md) | clean | best-guessed | 85% |
-| F17 | [the live model id is masked in the zero-qualified refusal snapshot](./inventory.of=fulcrums.case=F17-live-model-id-masked-in-snapshot.md) | clean | best-guessed | 75% |
-| F18 | [the warm-cache bound reads two clocks: wall-clock fastest of ten spaced reads, cpu every read](./inventory.of=fulcrums.case=F18-warm-cache-bound-two-clocks.md) | clean | best-guessed | 75% |
+| F17 | [the live model id is masked in the zero-qualified refusal snapshot](./inventory.of=fulcrums.case=F17-live-model-id-masked-in-snapshot.md) | clean | reworked: exact id from the ask's own tier pick (r12) | 90% |
+| F18 | [the warm-cache bound: which clock](./inventory.of=fulcrums.case=F18-warm-cache-bound-two-clocks.md) | clean | reworked: every read, wall less run-queue wait (r12) | 85% |

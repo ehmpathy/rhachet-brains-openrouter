@@ -33,4 +33,8 @@ not see it either).
 `src/domain.operations/supply/sdkOpenRouterEndpoints.integration.test.ts` [case2]
 
 ## .verdict
-open — for the council
+superseded at i012 (peer r12) by a fifth option, measured: every read of ten under 50ms of
+wall-clock less the javascript thread's run-queue wait (`/proc/self/task/<pid>/schedstat`). the
+cause of the red was host load (load average 73 on 12 cores; 257ms of one 274ms read sat in the
+run queue, ~10ms on cpu), which `--runInBand` cannot cure since other processes set it. an i/o
+stall still counts: an 80ms sleep in the window went red

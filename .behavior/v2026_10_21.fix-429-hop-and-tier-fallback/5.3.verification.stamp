@@ -63,29 +63,28 @@
       │   │   ├─ 0 nitpicks ✓
       │   │   ├─ given: .behavior/v2026_10_21.fix-429-hop-and-tier-fallback/.reviews/peer/5.3.verification._.review.i003.412ef0da1a728d981f.r009._.given.by_peer.mech-test-scope-purity.md
       │   │   └─ taken: .behavior/v2026_10_21.fix-429-hop-and-tier-fallback/.reviews/peer/5.3.verification._.review.i003.412ef0da1a728d981f.r009._.taken.by_self.mech-test-scope-purity.md
-      │   ├─ r10: enroll-verif-snapshot-coverage (l3, 2/3)
-      │   │   ├─ approved 193.2s
+      │   ├─ r10: enroll-verif-snapshot-coverage (l3, 3/3)
+      │   │   ├─ approved 212.7s
       │   │   ├─ 0 blockers ✓
       │   │   ├─ 2 nitpicks 🟠
-      │   │   ├─ tallied by reviewer@openrouter/deepseek/flash
-      │   │   ├─ given: .behavior/v2026_10_21.fix-429-hop-and-tier-fallback/.reviews/peer/5.3.verification._.review.i010.4574fd62df04aa9fbf.r010._.given.by_peer.enroll-verif-snapshot-coverage.md
-      │   │   └─ taken: .behavior/v2026_10_21.fix-429-hop-and-tier-fallback/.reviews/peer/5.3.verification._.review.i010.4574fd62df04aa9fbf.r010._.taken.by_self.enroll-verif-snapshot-coverage.md
-      │   ├─ r11: enroll-verif-snapshot-blemishes (l3, 2/3)
-      │   │   ├─ approved 171.2s
+      │   │   ├─ given: .behavior/v2026_10_21.fix-429-hop-and-tier-fallback/.reviews/peer/5.3.verification._.review.i012.e82b2ca8e71fe4df3f.r010._.given.by_peer.enroll-verif-snapshot-coverage.md
+      │   │   └─ taken: .behavior/v2026_10_21.fix-429-hop-and-tier-fallback/.reviews/peer/5.3.verification._.review.i012.e82b2ca8e71fe4df3f.r010._.taken.by_self.enroll-verif-snapshot-coverage.md
+      │   ├─ r11: enroll-verif-snapshot-blemishes (l3, 3/3)
+      │   │   ├─ approved 227.6s
       │   │   ├─ 0 blockers ✓
-      │   │   ├─ 3 nitpicks 🟠
-      │   │   ├─ given: .behavior/v2026_10_21.fix-429-hop-and-tier-fallback/.reviews/peer/5.3.verification._.review.i010.4574fd62df04aa9fbf.r011._.given.by_peer.enroll-verif-snapshot-blemishes.md
-      │   │   └─ taken: .behavior/v2026_10_21.fix-429-hop-and-tier-fallback/.reviews/peer/5.3.verification._.review.i010.4574fd62df04aa9fbf.r011._.taken.by_self.enroll-verif-snapshot-blemishes.md
-      │   └─ r12: enroll-verif-test-intent (l3, 2/3)
-      │       ├─ rejected 220.5s
+      │   │   ├─ 4 nitpicks 🟠
+      │   │   ├─ given: .behavior/v2026_10_21.fix-429-hop-and-tier-fallback/.reviews/peer/5.3.verification._.review.i012.e82b2ca8e71fe4df3f.r011._.given.by_peer.enroll-verif-snapshot-blemishes.md
+      │   │   └─ taken: .behavior/v2026_10_21.fix-429-hop-and-tier-fallback/.reviews/peer/5.3.verification._.review.i012.e82b2ca8e71fe4df3f.r011._.taken.by_self.enroll-verif-snapshot-blemishes.md
+      │   └─ r12: enroll-verif-test-intent (l3, 3/3)
+      │       ├─ rejected 274.4s
       │       ├─ 6 blockers 🔴
       │       ├─ 0 nitpicks ✓
       │       ├─ tallied by reviewer@openrouter/deepseek/flash
-      │       ├─ given: .behavior/v2026_10_21.fix-429-hop-and-tier-fallback/.reviews/peer/5.3.verification._.review.i010.4574fd62df04aa9fbf.r012._.given.by_peer.enroll-verif-test-intent.md
-      │       └─ taken: .behavior/v2026_10_21.fix-429-hop-and-tier-fallback/.reviews/peer/5.3.verification._.review.i010.4574fd62df04aa9fbf.r012._.taken.by_self.enroll-verif-test-intent.md
+      │       ├─ given: .behavior/v2026_10_21.fix-429-hop-and-tier-fallback/.reviews/peer/5.3.verification._.review.i012.e82b2ca8e71fe4df3f.r012._.given.by_peer.enroll-verif-test-intent.md
+      │       └─ taken: .behavior/v2026_10_21.fix-429-hop-and-tier-fallback/.reviews/peer/5.3.verification._.review.i012.e82b2ca8e71fe4df3f.r012._.taken.by_self.enroll-verif-test-intent.md
       └─ judges
           └─ j1: $rhachet run --repo bhrain --skill route.stone.judge --mechanism reviewed? --stone $stone --route $route --allow-blockers 0 --allow-nitpicks 7
-              ├─ finished 15.1s ✗
+              ├─ finished 30.0s ✗
               └─ reason: blockers exceed threshold (6 > 0)
 
 🪷 the path continues

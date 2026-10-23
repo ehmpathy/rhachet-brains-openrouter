@@ -110,8 +110,8 @@ with no defect in the code. no design decision rides on these.
 | test | proves | old instrument, and its measured defect | new instrument |
 |---|---|---|---|
 | acceptance no-spend cases ([case4] typo, [case6] zero-qualified, [case9] json-schema) | a refused ask spends no credit | the key's `/key` usage before vs after: one meter for the whole key; it moved 198.067 → 198.042, 207.853540 → 207.853557, and 207.895 → 207.887 across refused asks with no send, even after a settled read | the `/chat/completions` sends of the ask, via a `fetch` spy (observe only), `toEqual(0)`; control [case3b] asserts a served ask counts `≥ 1`, so a blind spy goes red |
-| acceptance zero-qualified refusal snapshot | the refusal names the model the tier resolved to | the exact id `deepseek/deepseek-v4.1-flash` in the snapshot; openrouter shipped `-1017` and the snapshot broke with no change here | the id masked in the snapshot, plus a `toMatch` that the headline names a deepseek flash model |
-| `sdkOpenRouterEndpoints.integration.test.ts` [case2] | a warm read is cheap and makes no network read | 50ms of wall-clock on a disk-cache read: 329ms for one read, then 57ms for the fastest of five, under parallel suites; under 50ms alone | wall-clock under 50ms on the fastest of ten reads spaced 200ms apart (a slow cache or a stalled disk slows all ten; a load spike covers none), plus cpu (`process.cpuUsage`) under 50ms on every read, plus `fetchCalls === 0` (F18) |
+| acceptance zero-qualified refusal snapshot | the refusal names the model the tier resolved to | the exact id `deepseek/deepseek-v4.1-flash` in the snapshot; openrouter shipped `-1017` and the snapshot broke with no change here | the exact id read from `getOneTierModel`, the call the ask itself made (its held pick); the headline must name it, and the snapshot masks only that id |
+| `sdkOpenRouterEndpoints.integration.test.ts` [case2] | a warm read is cheap and makes no network read | 50ms of wall-clock on a disk-cache read: 329ms for one read, then 57ms for the fastest of five, under parallel suites, and 274ms for a read with 257ms of it in the cpu run queue on a host at load average 73 / 12 cores | every one of ten reads under 50ms of wall-clock less the js thread's run-queue wait (`/proc/self/task/<pid>/schedstat`); an i/o stall still counts (an 80ms sleep in the window goes red); plus `fetchCalls === 0` (F18) |
 
 ## the vision catalog changed with the code
 
@@ -154,7 +154,8 @@ retry cut is a separate latency change with no measurement yet, and 5xx is not y
   (404), a host 400, and a json ask answered in prose, each then the serve
 - `genBrainAtom.supply.integration.test.ts` [case6] [t1] — the live trail under a send counter
 - full suite on the final tree, `rhx git.repo.test --what all --against local --env test --mode apply --thorough`,
-  exit 0: unit 461, integration 160, acceptance 61 passed, 0 skipped; types, lint, format pass
+  each part on the final tree: unit 461, integration 159, acceptance 61 passed, 0 failed,
+  0 skipped; types, lint, format pass
 
 ## deferred, as dreams
 

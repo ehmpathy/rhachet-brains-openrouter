@@ -15,6 +15,8 @@ import { z } from 'zod';
 
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
+import { getOneTierModel } from '../../domain.operations/atom/getOneTierModel';
+import { sdkOpenRouterEndpoints } from '../../domain.operations/supply/sdkOpenRouterEndpoints';
 
 const REPO_ROOT = path.join(__dirname, '../../..');
 
@@ -214,21 +216,16 @@ const asStableSupply = (input: {
 /**
  * .what = a zero-qualified refusal, with its live counts and rows masked
  * .why = the shape a human reads (headline, funnel promises, fix line) is
- *        computed from the slug; the counts, the endpoint table, and the model id
- *        are live — a tier resolves to openrouter's newest model of its family, so
- *        a new release (e.g. `deepseek-v4.1-flash-1017`) renames it overnight
+ *        computed from the slug; the counts and the endpoint table are live
+ *
+ * .note = the model id is live too, but each caller masks the EXACT id it
+ *         expects, so a refusal that names any other model shows in the snap
  */
 const asStableZeroQualified = (input: { message: string }): string => {
   const lines = input.message.split('\n');
   const metadataAt = lines.indexOf('{');
   const human = metadataAt === -1 ? lines : lines.slice(0, metadataAt);
   const masked = human.map((line) => {
-    // .note = an id the caller already masked starts with `(`; leave it whole
-    if (/^✋ ConstraintError: no endpoint of [^\s(]\S* /.test(line))
-      return line.replace(
-        /no endpoint of [^\s(]\S* /,
-        'no endpoint of (a live model id) ',
-      );
     if (/^\s+\d+ ← /.test(line))
       return line.replace(/^\s+\d+ ← /, '    (live count) ← ');
     if (/^ {2}\$/.test(line)) return '  (a live endpoint row)';
@@ -627,10 +624,16 @@ describe('getBrainAtomsByOpenRouter.acceptance', () => {
                 genContextOpenRouter(),
               ),
           });
+          // the same call the ask made: it reads this machine's held pick
+          const modelPicked = await getOneTierModel(
+            { tier: 'openrouter/deepseek/flash', apiKey: getApiKey() },
+            { sdkOpenRouterEndpoints },
+          );
           return {
             isConstraint: error instanceof ConstraintError,
             message: error.message,
             completionSends,
+            modelPicked,
           };
         },
       );
@@ -641,10 +644,11 @@ describe('getBrainAtomsByOpenRouter.acceptance', () => {
         expect(scene.message).toContain('fix: drop or loosen the promise');
       });
 
-      // .why = the snapshot masks the live model id; this pins that the headline still names a deepseek flash model
+      // .why = the id is live (a tier reaches its line's newest model), so it is
+      //        read from the tier pick the ask itself made, then pinned exactly
       then('the refusal names the model the tier resolved to', () => {
-        expect(scene.message).toMatch(
-          /no endpoint of deepseek\/deepseek-[^\s]*flash[^\s]* keeps every promise/,
+        expect(scene.message).toContain(
+          `no endpoint of ${scene.modelPicked} keeps every promise`,
         );
       });
 
@@ -654,7 +658,11 @@ describe('getBrainAtomsByOpenRouter.acceptance', () => {
 
       then('the refusal a human reads matches snapshot', () => {
         expect(
-          asStableZeroQualified({ message: scene.message }),
+          asStableZeroQualified({
+            message: scene.message
+              .split(scene.modelPicked)
+              .join('(a live model id)'),
+          }),
         ).toMatchSnapshot();
       });
     });

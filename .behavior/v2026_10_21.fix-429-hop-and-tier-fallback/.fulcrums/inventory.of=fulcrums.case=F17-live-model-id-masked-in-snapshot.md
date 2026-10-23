@@ -25,4 +25,6 @@ the regex accepts any deepseek flash variant; a wrong pick within the family wou
 `src/contract/sdk/getBrainAtomsByOpenRouter.acceptance.test.ts` [case6]
 
 ## .verdict
-open — for the council
+reworked to option 3 at i012 (peer r12): the test reads the id from `getOneTierModel`, the call
+the ask itself made (the held pick), not a copy of its logic; the headline is asserted to name that
+exact id, and the snapshot masks only that id
