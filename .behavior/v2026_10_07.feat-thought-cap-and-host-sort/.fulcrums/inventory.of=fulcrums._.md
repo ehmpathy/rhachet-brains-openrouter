@@ -43,5 +43,6 @@ axis: `case` (occurrence). positions declared as they arise.
 | [F37](./inventory.of=fulcrums.case=F37-transformer-unit-tests-stay-data-driven-caselists.md) | transformer unit tests stay data-driven caselists, as the repo writes them | dirty | best-guessed | 75% |
 | [F38](./inventory.of=fulcrums.case=F38-extant-snaps-follow-the-prod-fix-they-report.md) | extant snaps and asserts follow the prod fix they report, each rationalized in the yield | clean | best-guessed | 80% |
 | [F39](./inventory.of=fulcrums.case=F39-throughput-under-floor-ignores-price.md) | `sort=throughput` under floor ranks by speed alone; the listed slug has no price cap | clean | ruled by robot:director: keep — throughput ranks by speed alone; price is `sort=price`'s job; the floor filters, it does not rank | — |
+| [F40](./inventory.of=fulcrums.case=F40-merge-onto-main-27-one-host-fault-decision.md) | the merge onto main's #27 keeps one host-fault decision, named "host fault"; a marked 502–504 now hops in the admitted set | clean | best-guessed | 80% |
 
 gaps: none. every row has an entry.
