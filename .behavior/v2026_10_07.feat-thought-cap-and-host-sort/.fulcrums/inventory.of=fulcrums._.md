@@ -42,5 +42,6 @@ axis: `case` (occurrence). positions declared as they arise.
 | [F36](./inventory.of=fulcrums.case=F36-live-tests-read-the-body-via-a-passthrough-spy.md) | live tests read the request body through a passthrough spy, never a mock | clean | best-guessed | 80% |
 | [F37](./inventory.of=fulcrums.case=F37-transformer-unit-tests-stay-data-driven-caselists.md) | transformer unit tests stay data-driven caselists, as the repo writes them | dirty | best-guessed | 75% |
 | [F38](./inventory.of=fulcrums.case=F38-extant-snaps-follow-the-prod-fix-they-report.md) | extant snaps and asserts follow the prod fix they report, each rationalized in the yield | clean | best-guessed | 80% |
+| [F39](./inventory.of=fulcrums.case=F39-throughput-under-floor-ignores-price.md) | `sort=throughput` under floor ranks by speed alone; the listed slug has no price cap | clean | ruled by robot:director: keep — throughput ranks by speed alone; price is `sort=price`'s job; the floor filters, it does not rank | — |
 
 gaps: none. every row has an entry.
