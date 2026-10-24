@@ -25,6 +25,15 @@ const JSON_IGNORED_READ = 'json-ignored';
  * .why = one name and one schema, shared by the read and the write
  */
 const TIER_PICK_READ = 'tier-pick';
+
+/**
+ * .what = the cache read name of a model's endpoints
+ * .why = one name, shared by the read and the drop (case=21), so a drop never misses
+ *
+ * .note = 'endpoints.v2', never 'endpoints': an entry from a prior release, with no
+ *         `maxCompletionTokens`, must never deserialize as this shape
+ */
+const ENDPOINTS_READ = 'endpoints.v2';
 const SCHEMA_TIER_PICK = z.object({ model: z.string() });
 
 /**
@@ -50,7 +59,7 @@ const getAllEndpointsForModel = withExtendableCacheAsync(
     expiration: { minutes: 30 },
     serialize: {
       key: (input) =>
-        asOpenRouterCacheKey({ read: 'endpoints', model: input.model }),
+        asOpenRouterCacheKey({ read: ENDPOINTS_READ, model: input.model }),
       value: (output) => JSON.stringify(output),
     },
     deserialize: { value: (cached) => JSON.parse(cached) },
@@ -118,7 +127,10 @@ export const sdkOpenRouterEndpoints = {
    */
   delForModel: (input: { model: string }): Promise<void> =>
     getAllEndpointsForModel.invalidate({
-      forKey: asOpenRouterCacheKey({ read: 'endpoints', model: input.model }),
+      forKey: asOpenRouterCacheKey({
+        read: ENDPOINTS_READ,
+        model: input.model,
+      }),
     }),
 
   /**

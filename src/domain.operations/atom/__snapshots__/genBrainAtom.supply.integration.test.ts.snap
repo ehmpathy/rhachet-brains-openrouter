@@ -11,7 +11,11 @@ exports[`genBrainAtom.supply.integration given: [case1] the agreed reviewer floo
       },
       {
         "left": "(live count)",
-        "promise": "supports(response_format,structured_outputs)",
+        "promise": "supports(response_format)",
+      },
+      {
+        "left": "(live count)",
+        "promise": "supports(structured_outputs)",
       },
       {
         "left": "(live count)",
@@ -43,7 +47,11 @@ exports[`genBrainAtom.supply.integration given: [case2] the other speed form: sp
       },
       {
         "left": "(live count)",
-        "promise": "supports(response_format,structured_outputs)",
+        "promise": "supports(response_format)",
+      },
+      {
+        "left": "(live count)",
+        "promise": "supports(structured_outputs)",
       },
       {
         "left": "(live count)",
@@ -75,7 +83,11 @@ exports[`genBrainAtom.supply.integration given: [case3] the bare slug, via the d
       },
       {
         "left": "(live count)",
-        "promise": "supports(response_format,structured_outputs)",
+        "promise": "supports(response_format)",
+      },
+      {
+        "left": "(live count)",
+        "promise": "supports(structured_outputs)",
       },
       {
         "left": "(live count)",
@@ -135,7 +147,11 @@ exports[`genBrainAtom.supply.integration given: [case5] a price bound: floor&pri
       },
       {
         "left": "(live count)",
-        "promise": "supports(response_format,structured_outputs)",
+        "promise": "supports(response_format)",
+      },
+      {
+        "left": "(live count)",
+        "promise": "supports(structured_outputs)",
       },
       {
         "left": "(live count)",
@@ -163,7 +179,11 @@ exports[`genBrainAtom.supply.integration given: [case6] a filter with no floor: 
       },
       {
         "left": "(live count)",
-        "promise": "supports(response_format,structured_outputs)",
+        "promise": "supports(response_format)",
+      },
+      {
+        "left": "(live count)",
+        "promise": "supports(structured_outputs)",
       },
       {
         "left": "(live count)",
@@ -191,7 +211,11 @@ exports[`genBrainAtom.supply.integration given: [case7] a precision promise: flo
       },
       {
         "left": "(live count)",
-        "promise": "supports(response_format,structured_outputs)",
+        "promise": "supports(response_format)",
+      },
+      {
+        "left": "(live count)",
+        "promise": "supports(structured_outputs)",
       },
       {
         "left": "(live count)",

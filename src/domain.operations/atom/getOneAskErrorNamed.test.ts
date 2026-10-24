@@ -3,6 +3,7 @@ import { asIsoDateStamp, asIsoTimeStamp } from 'iso-time';
 import OpenAI from 'openai';
 import { given, then, useThen, when } from 'test-fns';
 
+import { HostFaultError } from '../../domain.objects/HostFaultError';
 import type { OpenRouterCatalogModel } from '../../domain.objects/OpenRouterCatalogModel';
 import { getOneAskErrorNamed } from './getOneAskErrorNamed';
 
@@ -129,6 +130,27 @@ describe('getOneAskErrorNamed', () => {
       );
       then('it returns the throw as it came', () => {
         expect(result.named).toEqual('a bare string');
+      });
+    });
+  });
+
+  // .why = a fault the supply named (cut body, stall, all-thought) must reach the caller
+  //        as named, never re-wrapped by the ask's own catch
+  given('[case6] a host fault the supply already named', () => {
+    const error = new HostFaultError({
+      fault: 'stalled',
+      tags: ['alpha'],
+      bound: { minutes: 10 },
+    });
+    when('[t0] the error is named', () => {
+      const result = useThen('it resolves', () =>
+        runOne({ error, model: 'qwen/qwen3.6-max' }),
+      );
+      then('it returns the HostFaultError untouched', () => {
+        expect(result.named).toBe(error);
+      });
+      then('it reads no catalog', () => {
+        expect(result.reads).toEqual(0);
       });
     });
   });

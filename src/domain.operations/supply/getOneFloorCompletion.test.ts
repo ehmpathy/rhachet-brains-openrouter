@@ -1,4 +1,5 @@
 import { MalfunctionError } from 'helpful-errors';
+import type { IsoDuration } from 'iso-time';
 import OpenAI from 'openai';
 import { getError, given, then, useThen, when } from 'test-fns';
 
@@ -20,9 +21,13 @@ type HostBehavior =
   | 'hostError400Reason' // a host 400 whose body names a reason (a context limit)
   | 'callerError400' // a 400 openrouter returned for the request itself
   | 'strangerError400' // a host 400 whose name is not the admitted host's
+  | 'empty' // a `stop` reply with 0 chars (issue #24)
+  | 'bodyCut' // a body that ends mid-json
+  | 'stall' // a host that never sends a whole body
   | 429
   | 404
-  | 500;
+  | 500
+  | 502;
 
 /**
  * .what = the content each served behavior answers with
@@ -34,6 +39,7 @@ const CONTENT_BY_BEHAVIOR: Record<string, string> = {
   serveJson: '{"content":"ok"}',
   prose: 'Sure! Here is the answer: ok',
   fail: '',
+  empty: '',
 };
 
 /**
@@ -49,15 +55,29 @@ const genOpenAiFake = (input: {
   const openai = {
     chat: {
       completions: {
-        create: async (request: {
-          provider: { only: string[]; allow_fallbacks: boolean };
-        }) => {
+        // .note = two positional args, as the sdk's `create(body, options)` takes them
+        create: async (
+          request: {
+            provider: { only: string[]; allow_fallbacks: boolean };
+          },
+          options: { signal: AbortSignal },
+        ) => {
           const tag = request.provider.only[0]!;
           admits.push({
             only: request.provider.only,
             allowFallbacks: request.provider.allow_fallbacks,
           });
           const behavior = input.behaviorByTag[tag];
+          // a body that ends mid-json: the sdk's parse raises a SyntaxError
+          if (behavior === 'bodyCut')
+            throw new SyntaxError('Unexpected end of JSON input');
+          // a host that never sends a whole body: only the abort ends the call
+          if (behavior === 'stall')
+            return new Promise((_, reject) =>
+              options.signal.addEventListener('abort', () =>
+                reject(new OpenAI.APIUserAbortError()),
+              ),
+            );
           // a host 400 carries openrouter's marker and the host's name
           if (behavior === 'hostError400')
             throw new OpenAI.APIError(
@@ -174,6 +194,7 @@ const genEndpoint = (input: { tag: string }): OpenRouterEndpoint => ({
   pricePromptUsdPerToken: 0.00000003,
   priceCompletionUsdPerToken: 0.0000005,
   throughputTps: 80,
+  maxCompletionTokens: null,
   zdr: true,
 });
 
@@ -184,8 +205,10 @@ const FILTERS: SupplyFilters = {
   precision: null,
   privacy: null,
   priceMaxUsdPerMillion: null,
+  sort: null,
 };
 
+const BOUND: IsoDuration = { milliseconds: 50 }; // each hop's bound; short, so a stall case settles fast
 const MODEL = 'deepseek/deepseek-v4.1-flash';
 const QUEUE = ['cheap', 'mid', 'dear'].map((tag) => genEndpoint({ tag }));
 const REQUEST = {
@@ -213,6 +236,7 @@ const runWalk = async (input: {
       attempts: [],
       retryAfter: null,
       faultLast: null,
+      bound: BOUND,
     },
     { openai, sdkOpenRouterEndpoints },
   );
@@ -509,6 +533,7 @@ describe('getOneFloorCompletion', () => {
                 attempts: [],
                 retryAfter: null,
                 faultLast: null,
+                bound: BOUND,
               },
               { openai, sdkOpenRouterEndpoints },
             ),
@@ -638,6 +663,168 @@ describe('getOneFloorCompletion', () => {
     },
   );
 
+  // 🔴 .why = measured 2026-10-21: four of six vision reviews on deepseek flash died
+  //           on one host: a body cut mid-json once, a stall past 21 minutes three
+  //           times. openrouter served the whole time; the next host was one hop away
+  given(
+    '[case13] the cheapest endpoint cuts its body or stalls (case=9)',
+    () => {
+      when('[t1] the cheapest ends its body mid-json', () => {
+        const scene = useThen('it serves', async () =>
+          runWalk({
+            expectsJson: false,
+            behaviorByTag: { cheap: 'bodyCut', mid: 'serve', dear: 'serve' },
+          }),
+        );
+
+        then('it steps to the next cheapest, never a raw SyntaxError', () => {
+          expect(scene.servedTag).toEqual('mid');
+        });
+
+        then('the trail names the cut body', () => {
+          expect(scene.attempts).toEqual([
+            { tag: 'cheap', outcome: 'body-cut' },
+          ]);
+        });
+      });
+
+      when('[t2] the cheapest sends no whole body inside the bound', () => {
+        const scene = useThen('it serves', async () =>
+          runWalk({
+            expectsJson: false,
+            behaviorByTag: { cheap: 'stall', mid: 'serve', dear: 'serve' },
+          }),
+        );
+
+        then('it aborts that hop at the bound, and steps to the next', () => {
+          expect(scene.admitted).toEqual([['cheap'], ['mid']]);
+          expect(scene.servedTag).toEqual('mid');
+        });
+
+        then('the trail names the stall', () => {
+          expect(scene.attempts).toEqual([
+            { tag: 'cheap', outcome: 'stalled' },
+          ]);
+        });
+      });
+
+      when('[t3] every qualified host stalls', () => {
+        const scene = useThen('it fails loud', async () => {
+          const error = await getError(
+            runWalk({
+              expectsJson: false,
+              behaviorByTag: { cheap: 'stall', mid: 'stall', dear: 'stall' },
+            }),
+          );
+          return {
+            isMalfunction: error instanceof MalfunctionError,
+            message: error.message,
+          };
+        });
+
+        then('it is the floor-exhausted MalfunctionError', () => {
+          expect(scene.isMalfunction).toEqual(true);
+        });
+
+        then(
+          'it stops after two stalls, and names the host left untried',
+          () => {
+            expect(scene.message).toContain('stalled   cheap');
+            expect(scene.message).toContain('stalled   mid');
+            expect(scene.message).not.toContain('stalled   dear');
+            expect(scene.message).toContain(
+              'the walk stopped after 2 stalled hosts, with 1 untried',
+            );
+          },
+        );
+
+        then(
+          'the fix names a thought cap as the lever for a slow answer (case=9)',
+          () => {
+            expect(scene.message).toContain('cap thought (effort on the ask)');
+          },
+        );
+
+        then('the message a caller reads matches snapshot', () => {
+          expect(scene.message).toMatchSnapshot();
+        });
+      });
+    },
+  );
+
+  given('[case14] the cheapest endpoint answers a 502 (issue #12)', () => {
+    when('[t0] the walk runs', () => {
+      const scene = useThen('it serves', async () =>
+        runWalk({
+          expectsJson: false,
+          behaviorByTag: { cheap: 502, mid: 'serve', dear: 'serve' },
+        }),
+      );
+
+      then('it steps to the next cheapest', () => {
+        expect(scene.admitted).toEqual([['cheap'], ['mid']]);
+        expect(scene.servedTag).toEqual('mid');
+      });
+
+      then('the trail names the failed hop', () => {
+        expect(scene.attempts).toEqual([{ tag: 'cheap', outcome: 'failed' }]);
+      });
+
+      then('a 502 drops no cache entry; the list is still true', () => {
+        expect(scene.dels).toEqual([]);
+      });
+    });
+  });
+
+  // 🔴 .why = measured 2026-10 (issue #24): Morph answered `stop` with 0 chars on three
+  //           of three json asks; the walk read it as served, the ask then threw
+  given(
+    '[case15] the cheapest endpoint ends a json ask with no content (issue #24)',
+    () => {
+      when('[t0] the walk runs a json ask', () => {
+        const scene = useThen('it serves', async () =>
+          runWalk({
+            expectsJson: true,
+            behaviorByTag: {
+              cheap: 'empty',
+              mid: 'serveJson',
+              dear: 'serveJson',
+            },
+          }),
+        );
+
+        then('it steps to the next cheapest', () => {
+          expect(scene.servedTag).toEqual('mid');
+        });
+
+        then('the trail names the empty hop', () => {
+          expect(scene.attempts).toEqual([{ tag: 'cheap', outcome: 'empty' }]);
+        });
+
+        then('the empty host is remembered, as a prose host is', () => {
+          expect(scene.marks).toEqual([{ model: MODEL, tag: 'cheap' }]);
+        });
+      });
+
+      when('[t1] the walk runs a plain ask', () => {
+        const scene = useThen('it serves', async () =>
+          runWalk({
+            expectsJson: false,
+            behaviorByTag: { cheap: 'empty', mid: 'serve', dear: 'serve' },
+          }),
+        );
+
+        then(
+          'an empty plain reply is not a json defect: the cheapest serves',
+          () => {
+            expect(scene.servedTag).toEqual('cheap');
+            expect(scene.marks).toEqual([]);
+          },
+        );
+      });
+    },
+  );
+
   given('[case5] the cheapest endpoint fails for another reason', () => {
     when('[t0] the walk runs', () => {
       then(
@@ -658,6 +845,7 @@ describe('getOneFloorCompletion', () => {
                 attempts: [],
                 retryAfter: null,
                 faultLast: null,
+                bound: BOUND,
               },
               { openai, sdkOpenRouterEndpoints },
             ),

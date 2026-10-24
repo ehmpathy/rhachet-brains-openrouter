@@ -1,0 +1,140 @@
+diff --git a/dist/contract/sdk.brains.d.ts b/dist/contract/sdk.brains.d.ts
+index 44e244a3cb56ae2a4e6a1c2f7fe001f3dcb4fc3a..243f31f799588ca933da584114d5b573a2f728b8 100644
+--- a/dist/contract/sdk.brains.d.ts
++++ b/dist/contract/sdk.brains.d.ts
+@@ -24,6 +24,7 @@ export type { BrainPlugToolExecution } from '../domain.objects/BrainPlugToolExec
+ export type { BrainPlugToolInvocation } from '../domain.objects/BrainPlugToolInvocation';
+ export { BrainRepl } from '../domain.objects/BrainRepl';
+ export { BrainSeries } from '../domain.objects/BrainSeries';
++export type { BrainEffort, BrainEffortLevel, BrainSupportsEffort, } from '../domain.objects/BrainEffort';
+ export { BrainSpec } from '../domain.objects/BrainSpec';
+ export type { BrainSpecifier } from '../domain.objects/BrainSpecifier';
+ export type { BrainSupplierSlug } from '../domain.objects/BrainSupplierSlug';
+diff --git a/dist/domain.objects/BrainAtom.d.ts b/dist/domain.objects/BrainAtom.d.ts
+index b4c21de979583e01dd4a204b43aaf922d9e3d8ea..163a34a43820be148efe1e4536c50c664a5fc3ee 100644
+--- a/dist/domain.objects/BrainAtom.d.ts
++++ b/dist/domain.objects/BrainAtom.d.ts
+@@ -3,6 +3,7 @@ import type { Artifact } from 'rhachet-artifact';
+ import type { GitFile } from 'rhachet-artifact-git';
+ import type { Empty } from 'type-fns';
+ import type { z } from 'zod';
++import type { BrainEffort } from './BrainEffort';
+ import type { BrainEpisode } from './BrainEpisode';
+ import type { BrainOutput } from './BrainOutput';
+ import type { BrainPlugs } from './BrainPlugs';
+@@ -66,6 +67,7 @@ export interface BrainAtom<TContext = Empty> {
+             episode: BrainEpisode;
+         };
+         plugs?: TPlugs;
++        effort?: BrainEffort;
+         role: {
+             briefs?: Artifact<typeof GitFile>[];
+         };
+diff --git a/dist/domain.objects/BrainEffort.d.ts b/dist/domain.objects/BrainEffort.d.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..045dbcb39046473e1a66faac2670abfa8fb81aa6
+--- /dev/null
++++ b/dist/domain.objects/BrainEffort.d.ts
+@@ -0,0 +1,28 @@
++import type { PickOne } from 'type-fns';
++/**
++ * .what = one effort level a brain may accept
++ * .why = level sets differ per supplier and grow; three autocomplete, any string passes
++ *        through for the brain to validate against its `spec.supports.effort.levels`
++ */
++export type BrainEffortLevel = 'low' | 'medium' | 'high' | (string & {});
++/**
++ * .what = how hard a brain may think before it must answer, per ask
++ * .why = the thought cost is per ask; a level for a caller with no token figure, a
++ *        budget for a deadline-bound one
++ *
++ * .note = a bare string aliases `{ level }`
++ */
++export type BrainEffort = BrainEffortLevel | PickOne<{
++    level: BrainEffortLevel;
++    budget: {
++        tokens: number;
++    };
++}>;
++/**
++ * .what = which effort forms a brain honors
++ * .why = so a caller can branch before the call
++ */
++export type BrainSupportsEffort = {
++    levels: string[];
++    budget: boolean;
++} | null;
+diff --git a/dist/domain.objects/BrainOutputMetrics.d.ts b/dist/domain.objects/BrainOutputMetrics.d.ts
+index cba531bbf34c163b65e054b5e9ffafe463131c0b..69ecdf599bfd24394bb904ec7748540341303227 100644
+--- a/dist/domain.objects/BrainOutputMetrics.d.ts
++++ b/dist/domain.objects/BrainOutputMetrics.d.ts
+@@ -16,6 +16,11 @@ export interface BrainOutputMetrics {
+         tokens: {
+             input: number;
+             output: number;
++            /**
++             * .what = thought tokens the reply spent, carved out of output
++             * .note = null where the supplier reports none; optional, so a brain that predates it still builds its metrics
++             */
++            thought?: number | null;
+             cache: {
+                 get: number;
+                 set: number;
+diff --git a/dist/domain.objects/BrainSpec.d.ts b/dist/domain.objects/BrainSpec.d.ts
+index cbbc7f33e73e242d229c959c3a47bd47b66134a2..bcd8ebf3518ba55d894d9f4c5a946a5d3f343fa0 100644
+--- a/dist/domain.objects/BrainSpec.d.ts
++++ b/dist/domain.objects/BrainSpec.d.ts
+@@ -1,6 +1,7 @@
+ import { DomainLiteral } from 'domain-objects';
+ import type { IsoPrice } from 'iso-price';
+ import type { IsoDuration } from 'iso-time';
++import type { BrainSupportsEffort } from './BrainEffort';
+ /**
+  * .what = static specification that the brain supplier publishes and guarantees
+  * .why = enables callers to compare cost/gain before invocation
+@@ -12,6 +13,16 @@ import type { IsoDuration } from 'iso-time';
+  *   - knowledge cutoff
+  */
+ export interface BrainSpec {
++    /**
++     * .what = which per-ask inputs the brain honors
++     * .note = optional, so a brain that predates it still builds its spec
++     */
++    supports?: {
++        /**
++         * .what = the effort forms the brain honors; null if it accepts no effort
++         */
++        effort: BrainSupportsEffort;
++    };
+     /**
+      * .what = what it costs to use the brain
+      */
+diff --git a/dist/domain.objects/ContextBrain.d.ts b/dist/domain.objects/ContextBrain.d.ts
+index 308ed29d1166aea6fdd383bf06af7b8e87a97f04..ab843cce4893720f365077b0e5f440d1991362bc 100644
+--- a/dist/domain.objects/ContextBrain.d.ts
++++ b/dist/domain.objects/ContextBrain.d.ts
+@@ -1,3 +1,4 @@
++import type { BrainEffort } from './BrainEffort';
+ import { DomainLiteral, type RefByUnique } from 'domain-objects';
+ import type { Artifact } from 'rhachet-artifact';
+ import type { GitFile } from 'rhachet-artifact-git';
+@@ -41,6 +42,7 @@ export interface ContextBrain<TBrainChoice = BrainChoice | null> {
+             ask: <TOutput>(input: {
+                 brain: RefByUnique<typeof BrainAtom>;
+                 plugs?: BrainPlugs;
++                effort?: BrainEffort;
+                 role: {
+                     briefs?: Artifact<typeof GitFile>[];
+                 };
+diff --git a/dist/domain.objects/index.d.ts b/dist/domain.objects/index.d.ts
+index aa27cb8be23f4e6f29afefe1404ed2debd31b189..4a94240225e083e630f5e852fb9c748ddc83f74e 100644
+--- a/dist/domain.objects/index.d.ts
++++ b/dist/domain.objects/index.d.ts
+@@ -25,6 +25,7 @@ export * from './BrainOutput';
+ export * from './BrainOutputMetrics';
+ export * from './BrainRepl';
+ export * from './BrainSeries';
++export * from './BrainEffort';
+ export * from './BrainSpec';
+ export * from './BrainSpecifier';
+ export * from './BrainSuppliesCreds';

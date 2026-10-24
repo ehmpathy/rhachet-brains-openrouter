@@ -1,4 +1,6 @@
+# rhachet patch = the effort types of ehmpathy/rhachet#595 (.d.ts only) — drop once #595 releases
 # rhachet-roles-bhrain patch = the judge keys a stance by the given's filename, never its raw path
 # upstream: ehmpathy/rhachet-roles-bhrain#693 — drop this patch once #693 releases
 patchedDependencies:
+  rhachet@1.50.0: patches/rhachet@1.50.0.patch
   rhachet-roles-bhrain@0.42.1: patches/rhachet-roles-bhrain@0.42.1.patch

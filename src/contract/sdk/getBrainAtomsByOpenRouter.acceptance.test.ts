@@ -1,7 +1,9 @@
 import { ConstraintError, MalfunctionError } from 'helpful-errors';
 import { isIsoPrice, priceDivide, priceMultiply } from 'iso-price';
+import { Completions } from 'openai/resources/chat/completions';
 import { type BrainAtom, genContextBrain } from 'rhachet';
 import type {
+  BrainEffort,
   BrainPlugToolDefinition,
   BrainPlugToolExecution,
 } from 'rhachet/brains';
@@ -88,7 +90,7 @@ const genContextOpenRouter = () => ({
 
 /**
  * .what = GET an openrouter api path, as json — test setup only
- * .why = the unlisted id is picked live
+ * .why = the unlisted id, and the jsonless id, are picked live from openrouter's catalog
  *
  * .note = each read names the shape it needs; a drifted body fails the test
  *         loud, rather than pass on a field read as `undefined`
@@ -160,6 +162,14 @@ const getOneSendsOfRefusedAsk = async (input: {
 };
 
 /**
+ * .what = a spy on the sdk's one chat completion call; it records, never replaces
+ * .why = a thought cap or a sort must reach openrouter, not only the funnel, so a
+ *        case reads the body the built package sent (F36)
+ */
+const spyCreate = jest.spyOn(Completions.prototype, 'create');
+afterAll(() => spyCreate.mockRestore());
+
+/**
  * .what = the five tier names this package lists, as literals
  * .why = a tier added or dropped without this suite goes red here
  */
@@ -185,6 +195,7 @@ const SCHEMA_OUTPUT_SUPPLY = z.object({
       provider: z.string(),
       generationId: z.string(),
       choice: z.object({
+        sort: z.enum(['price', 'throughput', 'latency']).nullable(),
         funnel: z.array(z.object({ promise: z.string(), left: z.number() })),
         ranked: z.array(z.record(z.string(), z.unknown())),
       }),
@@ -205,10 +216,15 @@ const asStableSupply = (input: {
   generationId: '(live id)',
   attempts: `(live hops; last = ${input.supply.attempts.at(-1)?.outcome})`,
   choice: {
-    funnel: input.supply.choice.funnel.map((step) => ({
-      promise: step.promise,
-      left: '(live count)',
-    })),
+    sort: input.supply.choice.sort,
+    // .note = the honors(json) step shows only when this machine's 7-day memory holds a
+    //         host, so its presence is machine state; it is dropped from the snap
+    funnel: input.supply.choice.funnel
+      .filter((step) => !step.promise.startsWith('honors(json)'))
+      .map((step) => ({
+        promise: step.promise,
+        left: '(live count)',
+      })),
     ranked: `(live rows, keys: ${Object.keys(input.supply.choice.ranked[0] ?? {}).join(', ')})`,
   },
 });
@@ -298,6 +314,33 @@ const getOneJsonlessIdLive = async (): Promise<string> => {
 };
 
 /**
+ * .what = a cheap text model openrouter lists today whose catalog row offers no
+ *         `reasoning`, so none of its endpoints can take a thought cap
+ * .why = case=6 is proven on a model that cannot take an effort; picked live, so the
+ *        proof never goes stale when a host adds reasoning
+ */
+const getOneReasonlessIdLive = async (): Promise<string> => {
+  const body = await getOneOpenRouterJson({
+    path: '/models',
+    schema: SCHEMA_MODELS,
+  });
+  const candidates = body.data
+    .filter((model) => !model.id.endsWith(':free'))
+    .filter((model) => !model.id.startsWith('~'))
+    .filter((model) => model.architecture?.input_modalities?.includes('text'))
+    .filter((model) => model.architecture?.output_modalities?.includes('text'))
+    .filter(
+      (model) => !(model.supported_parameters ?? []).includes('reasoning'),
+    )
+    .filter((model) => Number(model.pricing?.prompt) > 0)
+    .sort((a, b) => Number(a.pricing?.prompt) - Number(b.pricing?.prompt));
+  const found = candidates[0]?.id;
+  if (!found)
+    throw new MalfunctionError('no text model in the catalog lacks reasoning');
+  return found;
+};
+
+/**
  * .what = the part of a refusal a human reads, with live drift masked
  * .why = the snapshot must show the refusal's shape in review, yet the catalog
  *        moves: suggestions past the first (held by its own assertion) and the
@@ -314,6 +357,36 @@ const asStableRefusal = (input: { message: string }): string => {
         ? '  - (a live suggestion)'
         : line,
     )
+    .join('\n')
+    .trimEnd();
+};
+
+/**
+ * .what = a reply's token counts, each number masked, each null and each absent key kept
+ * .why = the counts are live; whether a count is a number, null, or absent is the
+ *        package's shape, and a caller reads it (`thought` included)
+ */
+const asStableTokens = (input: { tokens: unknown }): unknown => {
+  if (typeof input.tokens === 'number') return '(live count)';
+  if (input.tokens === null || typeof input.tokens !== 'object')
+    return input.tokens;
+  return Object.fromEntries(
+    Object.entries(input.tokens).map(([key, value]) => [
+      key,
+      asStableTokens({ tokens: value }),
+    ]),
+  );
+};
+
+/**
+ * .what = a refusal a human reads, whole, with its metadata json dropped
+ * .why = the json repeats the headline for a machine; the snap shows what a human reads,
+ *        as `asStableRefusal` and `asStableZeroQualified` do
+ */
+const asStableRefusalWhole = (input: { message: string }): string => {
+  const lines = input.message.split('\n');
+  const metadataAt = lines.indexOf('{');
+  return (metadataAt === -1 ? lines : lines.slice(0, metadataAt))
     .join('\n')
     .trimEnd();
 };
@@ -376,9 +449,34 @@ describe('getBrainAtomsByOpenRouter.acceptance', () => {
         }),
       );
 
+      // .why = an unset ask sends no new field: read the last body sent, on the built package
+      const body = useThen(
+        'the body it sent is read',
+        async (): Promise<Record<string, unknown>> =>
+          JSON.parse(JSON.stringify(spyCreate.mock.calls.at(-1)?.[0] ?? {})),
+      );
+
+      then(
+        'the request body carries no reasoning and no sort, as 0.1.3',
+        () => {
+          expect(body).not.toHaveProperty('reasoning');
+          expect(body).toHaveProperty('provider');
+          expect(body.provider).not.toHaveProperty('sort');
+        },
+      );
+
       then('the answer carries output', () => {
         expect(String(result.output).toLowerCase()).toContain('hello');
       });
+
+      then(
+        'the token counts a caller reads, live values masked, match snapshot',
+        () => {
+          expect(
+            asStableTokens({ tokens: result.metrics.size.tokens }),
+          ).toMatchSnapshot();
+        },
+      );
 
       then('the supply names the provider that served, and the funnel', () => {
         const { supply } = SCHEMA_OUTPUT_SUPPLY.parse(result);
@@ -446,6 +544,245 @@ describe('getBrainAtomsByOpenRouter.acceptance', () => {
 
       then('the supply report a caller audits matches snapshot', () => {
         const { supply } = SCHEMA_OUTPUT_SUPPLY.parse(result);
+        expect(asStableSupply({ supply })).toMatchSnapshot();
+      });
+    });
+  });
+
+  // .why = the reviewer floor's fastest-first twin, chosen by name, with a thought cap:
+  //        the consumer's path for both levers this package adds (case=1, case=4)
+  given(
+    '[case2c] the preferred floor, fastest first, asked with a thought budget',
+    () => {
+      const choice =
+        'openrouter/deepseek/flash/floor&speed=min50tps&privacy=full&sort=throughput';
+
+      when('[t0] it is asked with effort: { budget: { tokens: 600 } }', () => {
+        const result = useThen('it answers', async () =>
+          getOneBrainChosen({ choice }).ask({
+            role: {},
+            prompt: 'is 17 a prime number? reply with exactly yes or no',
+            schema: { output: z.string() },
+            effort: { budget: { tokens: 600 } },
+          }),
+        );
+
+        // .why = the cap must reach openrouter, not only the funnel: read the last body sent
+        const body = useThen(
+          'the body it sent is read',
+          async (): Promise<Record<string, unknown>> =>
+            JSON.parse(JSON.stringify(spyCreate.mock.calls.at(-1)?.[0] ?? {})),
+        );
+
+        then('the request body carries the cap as openrouter expects', () => {
+          expect(body.reasoning).toEqual({ max_tokens: 600 });
+          expect(body.provider).toMatchObject({ sort: 'throughput' });
+        });
+
+        then('the answer carries output', () => {
+          expect(String(result.output).toLowerCase()).toMatch(/yes|no/);
+        });
+
+        then(
+          'the token counts a caller reads, live values masked, match snapshot',
+          () => {
+            expect(
+              asStableTokens({ tokens: result.metrics.size.tokens }),
+            ).toMatchSnapshot();
+          },
+        );
+
+        then(
+          'the supply names the sort the slug wrote, and a served hop',
+          () => {
+            const { supply } = SCHEMA_OUTPUT_SUPPLY.parse(result);
+            expect(supply.choice.sort).toEqual('throughput');
+            expect(supply.attempts.at(-1)?.outcome).toEqual('served');
+          },
+        );
+
+        // .why = deepseek flash's hosts report reasoning tokens (q1, measured), so a null
+        //        here is a dropped field, never a host that reports none
+        then(
+          'the thought spent is reported as a count within the output',
+          () => {
+            const thought = result.metrics.size.tokens.thought ?? null;
+            expect(Number.isInteger(thought)).toEqual(true);
+            expect(thought ?? -1).toBeGreaterThanOrEqual(0);
+            expect(thought ?? Infinity).toBeLessThanOrEqual(
+              result.metrics.size.tokens.output,
+            );
+          },
+        );
+
+        then('the funnel holds the reasoning and output-room promises', () => {
+          const { supply } = SCHEMA_OUTPUT_SUPPLY.parse(result);
+          const promises = supply.choice.funnel.map((step) => step.promise);
+          expect(promises.some((p) => p.includes('reasoning'))).toEqual(true);
+          expect(promises).toContain('thought<output.max (budget 600 tokens)');
+        });
+
+        then('the supply report a caller audits matches snapshot', () => {
+          const { supply } = SCHEMA_OUTPUT_SUPPLY.parse(result);
+          expect(asStableSupply({ supply })).toMatchSnapshot();
+        });
+      });
+    },
+  );
+
+  // .why = the level form of the thought cap, on a bare tier, through the consumer's path (case=1)
+  given('[case2d] a bare tier, asked with a thought level', () => {
+    const choice = 'openrouter/deepseek/flash';
+
+    when("[t0] it is asked with effort: 'low'", () => {
+      const result = useThen('it answers', async () =>
+        getOneBrainChosen({ choice }).ask({
+          role: {},
+          prompt: 'is 17 a prime number? reply with exactly yes or no',
+          schema: { output: z.string() },
+          effort: 'low',
+        }),
+      );
+
+      // .why = the cap must reach openrouter, not only the funnel: read the last body sent
+      const body = useThen(
+        'the body it sent is read',
+        async (): Promise<Record<string, unknown>> =>
+          JSON.parse(JSON.stringify(spyCreate.mock.calls.at(-1)?.[0] ?? {})),
+      );
+
+      then('the request body carries the cap as openrouter expects', () => {
+        expect(body.reasoning).toEqual({ effort: 'low' });
+      });
+
+      then('the answer carries output', () => {
+        expect(String(result.output).toLowerCase()).toMatch(/yes|no/);
+      });
+
+      then(
+        'the token counts a caller reads, live values masked, match snapshot',
+        () => {
+          expect(
+            asStableTokens({ tokens: result.metrics.size.tokens }),
+          ).toMatchSnapshot();
+        },
+      );
+
+      then('the funnel holds the reasoning promise, and no budget step', () => {
+        const { supply } = SCHEMA_OUTPUT_SUPPLY.parse(result);
+        const promises = supply.choice.funnel.map((step) => step.promise);
+        expect(promises).toContain('supports(reasoning)');
+        expect(
+          promises.some((p) => p.startsWith('thought<output.max')),
+        ).toEqual(false);
+      });
+
+      then('the thought spent is reported as a count within the output', () => {
+        const thought = result.metrics.size.tokens.thought ?? null;
+        expect(Number.isInteger(thought)).toEqual(true);
+        expect(thought ?? -1).toBeGreaterThanOrEqual(0);
+        expect(thought ?? Infinity).toBeLessThanOrEqual(
+          result.metrics.size.tokens.output,
+        );
+      });
+
+      then('the supply report a caller audits matches snapshot', () => {
+        const { supply } = SCHEMA_OUTPUT_SUPPLY.parse(result);
+        expect(asStableSupply({ supply })).toMatchSnapshot();
+      });
+    });
+  });
+
+  // 🔴 .why = the natural way to write "fast host" must keep every default promise, zero
+  //           data retention included: a sort word orders hosts, never drops them
+  given('[case2e] a bare tier with only a sort word, asked live', () => {
+    when('[t0] it is asked', () => {
+      const result = useThen('it answers', async () =>
+        genBrainAtom({ slug: 'openrouter/deepseek/flash/sort=throughput' }).ask(
+          {
+            role: {},
+            prompt: 'is 17 a prime number? reply with exactly yes or no',
+            schema: { output: z.string() },
+          },
+          genContextOpenRouter(),
+        ),
+      );
+
+      then('the answer carries output', () => {
+        expect(String(result.output).toLowerCase()).toMatch(/yes|no/);
+      });
+
+      then('the funnel keeps the default promises, and names the sort', () => {
+        const { supply } = SCHEMA_OUTPUT_SUPPLY.parse(result);
+        const promises = supply.choice.funnel.map((step) => step.promise);
+        expect(promises).toContain('privacy=full (zdr list)');
+        expect(promises).toContain('speed>=50tps');
+        expect(supply.choice.sort).toEqual('throughput');
+        expect(supply.attempts.at(-1)?.outcome).toEqual('served');
+      });
+
+      // .why = the order is the sort's whole promise, so it is checked live, not only by a unit clamp
+      then('the qualified hosts rank fastest first', () => {
+        const { supply } = SCHEMA_OUTPUT_SUPPLY.parse(result);
+        const tpsQualified = supply.choice.ranked
+          .filter((row) => row.verdict === 'qualified')
+          .map((row) => Number(row.tps ?? 0));
+        expect(tpsQualified.length).toBeGreaterThan(0);
+        expect(tpsQualified).toEqual([...tpsQualified].sort((a, b) => b - a));
+      });
+
+      then('the supply report a caller audits matches snapshot', () => {
+        const { supply } = SCHEMA_OUTPUT_SUPPLY.parse(result);
+        expect(asStableSupply({ supply })).toMatchSnapshot();
+      });
+    });
+  });
+
+  // .why = case=4 [t2]: with no floor, openrouter orders the admitted set by the sort itself
+  // .note = a sort makes openrouter try hosts in order, so fallbacks stay on inside `only`:
+  //         a throttled top host steps aside, and no hop leaves the admitted set (F31)
+  given('[case2f] a sort with no floor, asked live', () => {
+    when('[t0] it is asked', () => {
+      const scene = useThen('it answers', async () => {
+        spyCreate.mockClear(); // .note = clears the record of calls only; create stays real
+        const result = await genBrainAtom({
+          slug: 'openrouter/deepseek/flash/privacy=full&sort=throughput',
+        }).ask(
+          {
+            role: {},
+            prompt:
+              'is 17 a prime number? reply as json: { "verdict": "yes" | "no" }',
+            schema: { output: z.object({ verdict: z.string() }) },
+          },
+          genContextOpenRouter(),
+        );
+        const body: Record<string, unknown> = JSON.parse(
+          JSON.stringify(spyCreate.mock.calls.at(-1)?.[0] ?? {}),
+        ); // .note = the body as serialized onto the wire
+        return { result, body, callsSent: spyCreate.mock.calls.length };
+      });
+
+      then('the answer carries output', () => {
+        expect(['yes', 'no']).toContain(scene.result.output.verdict);
+      });
+
+      then(
+        'one call admits the whole set, sorted by openrouter, fallbacks within it',
+        () => {
+          expect(scene.callsSent).toEqual(1);
+          expect(scene.body.provider).toMatchObject({
+            sort: 'throughput',
+            allow_fallbacks: true,
+            zdr: true, // the privacy promise rides every hop a fallback may take
+          });
+        },
+      );
+
+      then('the supply report a caller audits matches snapshot', () => {
+        const { supply } = SCHEMA_OUTPUT_SUPPLY.parse(scene.result);
+        expect(supply.attempts.map((attempt) => attempt.outcome)).toEqual([
+          'served',
+        ]);
         expect(asStableSupply({ supply })).toMatchSnapshot();
       });
     });
@@ -522,7 +859,7 @@ describe('getBrainAtomsByOpenRouter.acceptance', () => {
   given('[case4] a typo of a real id', () => {
     when('[t0] it is asked, live', () => {
       const scene = useThen(
-        'it is refused, and the key spends no credit',
+        'it is refused, and no completion is sent',
         async () => {
           const { error, completionSends } = await getOneSendsOfRefusedAsk({
             ask: () =>
@@ -599,6 +936,7 @@ describe('getBrainAtomsByOpenRouter.acceptance', () => {
         expect(scene.message).toContain("'cheap': unknown word");
       });
 
+      // .note = whole, metadata json included, as 0.1.3 pinned it
       then('the refusal a human reads matches snapshot', () => {
         expect(scene.message).toMatchSnapshot();
       });
@@ -609,7 +947,7 @@ describe('getBrainAtomsByOpenRouter.acceptance', () => {
   given('[case6] a price bound no endpoint meets', () => {
     when('[t0] it is asked, live', () => {
       const scene = useThen(
-        'it is refused, and the key spends no credit',
+        'it is refused, and no completion is sent',
         async () => {
           const { error, completionSends } = await getOneSendsOfRefusedAsk({
             ask: () =>
@@ -727,9 +1065,18 @@ describe('getBrainAtomsByOpenRouter.acceptance', () => {
       then('the funnel names the json promise, and a host served', () => {
         const { supply } = SCHEMA_OUTPUT_SUPPLY.parse(result);
         expect(supply.choice.funnel.map((f) => f.promise)).toContain(
-          'supports(response_format,structured_outputs)',
+          'supports(response_format)',
+        );
+        expect(supply.choice.funnel.map((f) => f.promise)).toContain(
+          'supports(structured_outputs)',
         );
         expect(supply.attempts.at(-1)?.outcome).toEqual('served');
+      });
+
+      // .why = the body reads in case2 and case2c–2f hold only if the spy sees the built
+      //        package's calls; a served ask proves it does
+      then('the completion spy recorded the call that served', () => {
+        expect(spyCreate.mock.calls.length).toBeGreaterThan(0);
       });
 
       then('the supply report a caller audits matches snapshot', () => {
@@ -750,7 +1097,10 @@ describe('getBrainAtomsByOpenRouter.acceptance', () => {
       then('the funnel holds no json promise', () => {
         const { supply } = SCHEMA_OUTPUT_SUPPLY.parse(result);
         expect(supply.choice.funnel.map((f) => f.promise)).not.toContain(
-          'supports(response_format,structured_outputs)',
+          'supports(response_format)',
+        );
+        expect(supply.choice.funnel.map((f) => f.promise)).not.toContain(
+          'supports(structured_outputs)',
         );
       });
     });
@@ -765,7 +1115,7 @@ describe('getBrainAtomsByOpenRouter.acceptance', () => {
 
     when('[t0] it is asked on the floor with a json schema, live', () => {
       const scene = useThen(
-        'it is refused, and the key spends no credit',
+        'it is refused, and no completion is sent',
         async () => {
           const { error, completionSends } = await getOneSendsOfRefusedAsk({
             ask: () =>
@@ -791,9 +1141,8 @@ describe('getBrainAtomsByOpenRouter.acceptance', () => {
         () => {
           expect(scene.isConstraint).toEqual(true);
           expect(scene.message).toContain('no call was sent');
-          expect(scene.message).toContain(
-            'supports(response_format,structured_outputs)',
-          );
+          expect(scene.message).toContain('supports(response_format)');
+          expect(scene.message).toContain('supports(structured_outputs)');
         },
       );
 
@@ -838,6 +1187,7 @@ describe('getBrainAtomsByOpenRouter.acceptance', () => {
         expect(scene.message).toContain('any openrouter id');
       });
 
+      // .note = whole, metadata json included, as 0.1.3 pinned it
       then('the refusal a human reads matches snapshot', () => {
         expect(scene.message).toMatchSnapshot();
       });
@@ -993,5 +1343,140 @@ describe('getBrainAtomsByOpenRouter.acceptance', () => {
         });
       });
     },
+  );
+
+  // .why = case=7: a malformed thought cap or host sort is refused through the contract,
+  //        before any spend — the same shapes the unit suites snap, here via the built package
+  const REFUSALS_CASE7: {
+    description: string;
+    getSlug: () => Promise<Parameters<typeof genBrainAtom>[0]['slug']>; // a refusal on a live-picked model reads the catalog first
+    effort: BrainEffort | null;
+    expectInMessage: string;
+    isZeroQualified: boolean; // a funnel refusal lists live hosts and counts, which drift; they are masked
+  }[] = [
+    {
+      description: 'an effort level this brain does not list',
+      getSlug: async () => 'openrouter/deepseek/flash',
+      // .note = the untyped caller rhachet's union forbids; refusal tests cast it
+      effort: 'extreme' as unknown as BrainEffort,
+      expectInMessage: 'invalid effort',
+      isZeroQualified: false,
+    },
+    {
+      description: 'an effort with both a level and a budget',
+      getSlug: async () => 'openrouter/deepseek/flash',
+      // .note = the untyped caller rhachet's union forbids; refusal tests cast it
+      effort: {
+        level: 'low',
+        budget: { tokens: 1000 },
+      } as unknown as BrainEffort,
+      expectInMessage: 'both level and budget',
+      isZeroQualified: false,
+    },
+    {
+      description: 'a latency sort under floor',
+      getSlug: async () => 'openrouter/deepseek/flash/floor&sort=latency',
+      effort: null,
+      expectInMessage: 'sort=latency',
+      isZeroQualified: false,
+    },
+    {
+      description: 'a sort word openrouter does not know',
+      getSlug: async () => 'openrouter/deepseek/flash/sort=fastest',
+      effort: null,
+      expectInMessage: 'fastest',
+      isZeroQualified: false,
+    },
+    {
+      // .why = q6: a budget past every host's output limit leaves no room to answer
+      description: 'a thought budget past every host output limit',
+      getSlug: async () => 'openrouter/deepseek/flash',
+      effort: { budget: { tokens: 10_000_000 } },
+      expectInMessage: '0 ← thought<output.max (budget 10,000,000 tokens)',
+      isZeroQualified: true,
+    },
+    {
+      // .why = case=6: a model no host of which lists reasoning, picked live so it never goes stale
+      description: 'an effort on a model whose hosts list no reasoning',
+      getSlug: async () => `openrouter/${await getOneReasonlessIdLive()}`,
+      effort: 'low',
+      expectInMessage: '0 ← supports(reasoning)',
+      isZeroQualified: true,
+    },
+    {
+      // .why = a sort word alone merges onto the default, which holds floor, so a latency
+      //        sort is refused as the written-out slug would be
+      description: 'a latency sort alone, under the default floor',
+      getSlug: async () => 'openrouter/deepseek/flash/sort=latency',
+      effort: null,
+      expectInMessage: 'cannot order by latency',
+      isZeroQualified: false,
+    },
+    {
+      // .why = case=7 [t0]: the budget a caller most often gets wrong is a count that is no count
+      description: 'a thought budget of zero tokens',
+      getSlug: async () => 'openrouter/deepseek/flash',
+      effort: { budget: { tokens: 0 } },
+      expectInMessage: 'tokens must be a positive integer',
+      isZeroQualified: false,
+    },
+  ];
+  REFUSALS_CASE7.map((refusal, index) =>
+    given(`[case${14 + index}] ${refusal.description}`, () => {
+      when('[t0] it is asked', () => {
+        const scene = useThen(
+          'it is refused, and no completion is sent',
+          async () => {
+            const slug = await refusal.getSlug();
+            const { error, completionSends } = await getOneSendsOfRefusedAsk({
+              ask: () =>
+                genBrainAtom({ slug }).ask(
+                  {
+                    role: {},
+                    prompt: 'reply with exactly: hello',
+                    schema: { output: z.string() },
+                    ...(refusal.effort !== null
+                      ? { effort: refusal.effort }
+                      : {}),
+                  },
+                  genContextOpenRouter(),
+                ),
+            });
+            return {
+              isConstraint: error instanceof ConstraintError,
+              message: error.message,
+              completionSends,
+            };
+          },
+        );
+
+        then('the refusal is a ConstraintError that names the cause', () => {
+          expect(scene.isConstraint).toEqual(true);
+          expect(scene.message).toContain(refusal.expectInMessage);
+        });
+
+        then('no completion is sent, so the key spends no credit', () => {
+          expect(scene.completionSends).toEqual(0);
+        });
+
+        then('the refusal a human reads matches snapshot', () => {
+          expect(
+            refusal.isZeroQualified
+              ? asStableZeroQualified({
+                  message: scene.message
+                    .replace(
+                      /no endpoint of \S+/,
+                      'no endpoint of (a live model id)',
+                    )
+                    .replace(
+                      /below [\d,]+, the largest/,
+                      'below (live limit), the largest',
+                    ), // a host's limit is live catalog data
+                })
+              : asStableRefusalWhole({ message: scene.message }),
+          ).toMatchSnapshot();
+        });
+      });
+    }),
   );
 });
