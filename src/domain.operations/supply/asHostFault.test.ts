@@ -1,6 +1,25 @@
 import OpenAI from 'openai';
 
+import { HostFaultError } from '../../domain.objects/HostFaultError';
 import { asHostFault } from './asHostFault';
+
+/**
+ * .what = a reply with one choice, as openrouter returns it
+ */
+const genReply = (input: {
+  finishReason: string | null;
+  content: string;
+}): OpenAI.ChatCompletion =>
+  ({
+    id: 'gen-1',
+    choices: [
+      {
+        index: 0,
+        finish_reason: input.finishReason,
+        message: { role: 'assistant', content: input.content },
+      },
+    ],
+  }) as unknown as OpenAI.ChatCompletion; // .note = openrouter's 'error' finish reason is absent from the sdk's union. removal: when the sdk's union includes it
 
 /**
  * .what = the body openrouter returned on 2026-10-21, captured live
@@ -22,7 +41,7 @@ const genApiError = (input: { status: number; body: object | undefined }) =>
 
 const TEST_CASES: {
   description: string;
-  given: { error: unknown };
+  given: Parameters<typeof asHostFault>[0];
   expect: { output: ReturnType<typeof asHostFault> };
 }[] = [
   {
@@ -186,6 +205,117 @@ const TEST_CASES: {
     expect: {
       output: { outcome: 'throttled', providerName: null, isHostMarked: false },
     },
+  },
+  {
+    description: 'a 502 is failed (issue #12)',
+    given: { error: genApiError({ status: 502, body: undefined }) },
+    expect: {
+      output: { outcome: 'failed', providerName: null, isHostMarked: false },
+    },
+  },
+  {
+    description: 'a 503 is failed',
+    given: { error: genApiError({ status: 503, body: undefined }) },
+    expect: {
+      output: { outcome: 'failed', providerName: null, isHostMarked: false },
+    },
+  },
+  {
+    description:
+      'a 504 that names its host is failed, with the name (issue #12)',
+    given: {
+      error: genApiError({
+        status: 504,
+        body: {
+          message: 'Provider returned error',
+          code: 504,
+          metadata: { provider_name: 'Chutes' },
+        },
+      }),
+    },
+    expect: {
+      output: { outcome: 'failed', providerName: 'Chutes', isHostMarked: true },
+    },
+  },
+  {
+    description: 'a cut body is body-cut, marked to no host',
+    given: {
+      error: new HostFaultError({
+        fault: 'body-cut',
+        tags: ['a'],
+        bound: { milliseconds: 1 },
+      }),
+    },
+    expect: {
+      output: { outcome: 'body-cut', providerName: null, isHostMarked: false },
+    },
+  },
+  {
+    description: 'a stall is stalled, marked to no host',
+    given: {
+      error: new HostFaultError({
+        fault: 'stalled',
+        tags: ['a'],
+        bound: { milliseconds: 1 },
+      }),
+    },
+    expect: {
+      output: { outcome: 'stalled', providerName: null, isHostMarked: false },
+    },
+  },
+  {
+    description: 'a whole json reply is no host fault',
+    given: {
+      response: genReply({ finishReason: 'stop', content: '{"a":1}' }),
+      expectsJson: true,
+    },
+    expect: { output: null },
+  },
+  {
+    description: 'prose where json was owed is prose',
+    given: {
+      response: genReply({ finishReason: 'stop', content: 'sure!' }),
+      expectsJson: true,
+    },
+    expect: {
+      output: { outcome: 'prose', providerName: null, isHostMarked: true },
+    },
+  },
+  {
+    description: 'stop with 0 chars where json was owed is empty (issue #24)',
+    given: {
+      response: genReply({ finishReason: 'stop', content: '' }),
+      expectsJson: true,
+    },
+    expect: {
+      output: { outcome: 'empty', providerName: null, isHostMarked: true },
+    },
+  },
+  {
+    description: 'stop with 0 chars on a plain ask is no host fault',
+    given: {
+      response: genReply({ finishReason: 'stop', content: '' }),
+      expectsJson: false,
+    },
+    expect: { output: null },
+  },
+  {
+    description: 'a reply that ended in error is failed',
+    given: {
+      response: genReply({ finishReason: 'error', content: '' }),
+      expectsJson: false,
+    },
+    expect: {
+      output: { outcome: 'failed', providerName: null, isHostMarked: true },
+    },
+  },
+  {
+    description: 'a reply cut at the output limit is never a host fault',
+    given: {
+      response: genReply({ finishReason: 'length', content: '' }),
+      expectsJson: true,
+    },
+    expect: { output: null },
   },
 ];
 

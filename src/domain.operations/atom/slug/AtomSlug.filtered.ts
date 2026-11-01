@@ -12,4 +12,6 @@ import type { BrainAtomSlugOpenRouterFiltered } from './AtomSlug';
 export const SLUGS_FILTERED_LISTED: BrainAtomSlugOpenRouterFiltered[] = [
   // the reviewer fleet's floor: cheapest zdr endpoint at >= 50 tok/s (wisher, 2026-10-01)
   'openrouter/deepseek/flash/floor&speed=min50tps&privacy=full',
+  // the same floor, fastest qualified host first: for lanes that race a deadline (case=4)
+  'openrouter/deepseek/flash/floor&speed=min50tps&privacy=full&sort=throughput',
 ];

@@ -14,6 +14,7 @@ const ADMITTED: OpenRouterEndpoint[] = [
     pricePromptUsdPerToken: 0.0000001,
     priceCompletionUsdPerToken: 0.0000001,
     throughputTps: 90,
+    maxCompletionTokens: null,
     zdr: true,
   },
 ];

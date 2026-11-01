@@ -1,7 +1,38 @@
 // Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
 
+exports[`getOneFloorExhaustedError a walk stopped on stalls names the stalls and the hosts left untried 1`] = `
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: the walk stopped after 2 stalled hosts, with 3 untried. no answer was returned.
+
+  stalled   cheap/fp8
+  stalled   mid/fp8
+
+fix: retry later; 3 qualified hosts were left untried, so a looser promise would not help.
+a stalled host sent no whole reply inside 10m. the bound ends a dead host;
+if answers are slow rather than dead, cap thought (effort on the ask), never a longer bound.
+
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "attempts": [
+    {
+      "tag": "cheap/fp8",
+      "outcome": "stalled"
+    },
+    {
+      "tag": "mid/fp8",
+      "outcome": "stalled"
+    }
+  ],
+  "retryAfter": null,
+  "faultReasonLast": null,
+  "untried": 3,
+  "bound": {
+    "minutes": 10
+  }
+}"
+`;
+
 exports[`getOneFloorExhaustedError a walk whose last host 400 named the caller's request shows that reason, and says to fix the request 1`] = `
-"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), or answered prose where json was owed. no answer was returned.
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), cut its body, stalled, or answered prose or 0 chars where json was owed. no answer was returned.
 
   throttled cheap/fp8
   refused   mid/fp8
@@ -28,12 +59,16 @@ fix: if the last host fault names your request (e.g. a context limit), fix the r
     }
   ],
   "retryAfter": "7",
-  "faultReasonLast": "This endpoint's maximum context length is 163840 tokens. However, you requested about 201234 tokens."
+  "faultReasonLast": "This endpoint's maximum context length is 163840 tokens. However, you requested about 201234 tokens.",
+  "untried": 0,
+  "bound": {
+    "minutes": 10
+  }
 }"
 `;
 
 exports[`getOneFloorExhaustedError a walk whose last host throttled shows its reason, and never blames the request 1`] = `
-"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), or answered prose where json was owed. no answer was returned.
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), cut its body, stalled, or answered prose or 0 chars where json was owed. no answer was returned.
 
   throttled cheap/fp8
   refused   mid/fp8
@@ -60,12 +95,16 @@ fix: retry after 7s (openrouter's retry-after), or loosen a promise so more endp
     }
   ],
   "retryAfter": "7",
-  "faultReasonLast": "rate limited upstream"
+  "faultReasonLast": "rate limited upstream",
+  "untried": 0,
+  "bound": {
+    "minutes": 10
+  }
 }"
 `;
 
 exports[`getOneFloorExhaustedError a walk with a throttle names the wait openrouter asked for 1`] = `
-"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), or answered prose where json was owed. no answer was returned.
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), cut its body, stalled, or answered prose or 0 chars where json was owed. no answer was returned.
 
   throttled cheap/fp8
   refused   mid/fp8
@@ -90,12 +129,16 @@ fix: retry after 7s (openrouter's retry-after), or loosen a promise so more endp
     }
   ],
   "retryAfter": "7",
-  "faultReasonLast": null
+  "faultReasonLast": null,
+  "untried": 0,
+  "bound": {
+    "minutes": 10
+  }
 }"
 `;
 
 exports[`getOneFloorExhaustedError a walk with no throttle says to retry later 1`] = `
-"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), or answered prose where json was owed. no answer was returned.
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), cut its body, stalled, or answered prose or 0 chars where json was owed. no answer was returned.
 
   throttled cheap/fp8
   refused   mid/fp8
@@ -120,12 +163,16 @@ fix: retry later, or loosen a promise so more endpoints qualify.
     }
   ],
   "retryAfter": null,
-  "faultReasonLast": null
+  "faultReasonLast": null,
+  "untried": 0,
+  "bound": {
+    "minutes": 10
+  }
 }"
 `;
 
 exports[`getOneFloorExhaustedError a walk with no throttle whose last host 400 named the request says to fix it, else retry later 1`] = `
-"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), or answered prose where json was owed. no answer was returned.
+"💥 MalfunctionError: openrouter served no qualified endpoint of deepseek/deepseek-v4.1-flash: each was rate limited, refused, failed (mid-reply or with its own error), cut its body, stalled, or answered prose or 0 chars where json was owed. no answer was returned.
 
   throttled cheap/fp8
   refused   mid/fp8
@@ -152,6 +199,10 @@ fix: if the last host fault names your request (e.g. a context limit), fix the r
     }
   ],
   "retryAfter": null,
-  "faultReasonLast": "This endpoint's maximum context length is 163840 tokens. However, you requested about 201234 tokens."
+  "faultReasonLast": "This endpoint's maximum context length is 163840 tokens. However, you requested about 201234 tokens.",
+  "untried": 0,
+  "bound": {
+    "minutes": 10
+  }
 }"
 `;

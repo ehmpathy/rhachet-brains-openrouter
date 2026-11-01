@@ -10,6 +10,7 @@ valid words, joined by '&' in any order:
   - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
   - privacy=full
   - price.max={N}usd/M
+  - sort=price|throughput|latency   (latency: only without floor)
 
 {
   "word": "speed=min50tps&speed.min=50tps"
@@ -26,6 +27,7 @@ valid words, joined by '&' in any order:
   - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
   - privacy=full
   - price.max={N}usd/M
+  - sort=price|throughput|latency   (latency: only without floor)
 
 {
   "word": "floor=yes"
@@ -42,6 +44,7 @@ valid words, joined by '&' in any order:
   - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
   - privacy=full
   - price.max={N}usd/M
+  - sort=price|throughput|latency   (latency: only without floor)
 
 {
   "word": "privacy=some"
@@ -58,9 +61,32 @@ valid words, joined by '&' in any order:
   - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
   - privacy=full
   - price.max={N}usd/M
+  - sort=price|throughput|latency   (latency: only without floor)
 
 {
   "word": "region=eu"
+}"
+`;
+
+exports[`asSupplyFilters refuses: sort=latency under floor 1`] = `
+"✋ ConstraintError: invalid openrouter supply filter 'sort=latency': the floor walk cannot order by latency
+
+fix: let openrouter order by latency, with no floor —
+  …/privacy=full&sort=latency   (a sort word alone keeps the default floor, so name a filter word)
+or keep the floor, ordered by throughput —
+  …/floor&sort=throughput
+
+valid words, joined by '&' in any order:
+  - floor
+  - speed=min{N}tps · speed.min={N}tps
+  - region=usa
+  - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
+  - privacy=full
+  - price.max={N}usd/M
+  - sort=price|throughput|latency   (latency: only without floor)
+
+{
+  "word": "sort=latency"
 }"
 `;
 
@@ -74,6 +100,7 @@ valid words, joined by '&' in any order:
   - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
   - privacy=full
   - price.max={N}usd/M
+  - sort=price|throughput|latency   (latency: only without floor)
 
 {
   "word": "speed=min50"
@@ -90,6 +117,7 @@ valid words, joined by '&' in any order:
   - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
   - privacy=full
   - price.max={N}usd/M
+  - sort=price|throughput|latency   (latency: only without floor)
 
 {
   "word": "speed.min=min50tps"
@@ -106,6 +134,7 @@ valid words, joined by '&' in any order:
   - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
   - privacy=full
   - price.max={N}usd/M
+  - sort=price|throughput|latency   (latency: only without floor)
 
 {
   "word": "floor&"
@@ -122,9 +151,27 @@ valid words, joined by '&' in any order:
   - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
   - privacy=full
   - price.max={N}usd/M
+  - sort=price|throughput|latency   (latency: only without floor)
 
 {
   "word": "precision=fp9"
+}"
+`;
+
+exports[`asSupplyFilters refuses: unknown sort 1`] = `
+"✋ ConstraintError: invalid openrouter supply filter 'sort=fastest': unknown sort
+
+valid words, joined by '&' in any order:
+  - floor
+  - speed=min{N}tps · speed.min={N}tps
+  - region=usa
+  - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
+  - privacy=full
+  - price.max={N}usd/M
+  - sort=price|throughput|latency   (latency: only without floor)
+
+{
+  "word": "sort=fastest"
 }"
 `;
 
@@ -138,6 +185,7 @@ valid words, joined by '&' in any order:
   - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
   - privacy=full
   - price.max={N}usd/M
+  - sort=price|throughput|latency   (latency: only without floor)
 
 {
   "word": "cheap"

@@ -27,6 +27,13 @@ export const getBrainAtomsByOpenRouter = (): BrainAtom[] => [
   ...SLUGS_FILTERED_LISTED.map((slug) => genBrainAtom({ slug })),
 ];
 
+// every way one host can fail an ask, as `supply.attempts` names it
+export type { HostFault } from '../../domain.objects/HostFault';
+// the error a no-floor ask raises when its host cuts its body or stalls
+export {
+  HostFaultError,
+  type HostFaultTransport,
+} from '../../domain.objects/HostFaultError';
 // the supply report each ask attaches as `output.supply`
 export type { SupplyReport } from '../../domain.objects/SupplyReport';
 // re-export types for consumer use

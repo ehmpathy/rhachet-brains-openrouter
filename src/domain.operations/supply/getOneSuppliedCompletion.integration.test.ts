@@ -183,6 +183,7 @@ const genEndpoint = (input: {
   pricePromptUsdPerToken: input.pricePerMillion / 1e6,
   priceCompletionUsdPerToken: input.pricePerMillion / 1e6,
   throughputTps: 90,
+  maxCompletionTokens: null,
   zdr: true,
 });
 
@@ -224,6 +225,7 @@ const runSupply = async (input: { openai: OpenAI }) =>
       filters: asSupplyFilters({ segment: 'privacy=full' }),
       paramsRequired: [],
       expectsJson: false,
+      reasoning: null,
     },
     { openai: input.openai, sdkOpenRouterEndpoints: genSdkFake() },
   );

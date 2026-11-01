@@ -19,9 +19,22 @@ exports[`getBrainAtomsByOpenRouter.acceptance given: [case2] the preferred floor
       },
     ],
     "ranked": "(live rows, keys: tag, estUsd, tps, verdict)",
+    "sort": null,
   },
   "generationId": "(live id)",
   "provider": "(live host)",
+}
+`;
+
+exports[`getBrainAtomsByOpenRouter.acceptance given: [case2] the preferred floor, chosen by name and asked live when: [t0] it is asked then: the token counts a caller reads, live values masked, match snapshot 1`] = `
+{
+  "cache": {
+    "get": "(live count)",
+    "set": "(live count)",
+  },
+  "input": "(live count)",
+  "output": "(live count)",
+  "thought": "(live count)",
 }
 `;
 
@@ -44,6 +57,151 @@ exports[`getBrainAtomsByOpenRouter.acceptance given: [case2b] the same promises 
       },
     ],
     "ranked": "(live rows, keys: tag, estUsd, tps, verdict)",
+    "sort": null,
+  },
+  "generationId": "(live id)",
+  "provider": "(live host)",
+}
+`;
+
+exports[`getBrainAtomsByOpenRouter.acceptance given: [case2c] the preferred floor, fastest first, asked with a thought budget when: [t0] it is asked with effort: { budget: { tokens: 600 } } then: the supply report a caller audits matches snapshot 1`] = `
+{
+  "attempts": "(live hops; last = served)",
+  "choice": {
+    "funnel": [
+      {
+        "left": "(live count)",
+        "promise": "all endpoints",
+      },
+      {
+        "left": "(live count)",
+        "promise": "supports(reasoning)",
+      },
+      {
+        "left": "(live count)",
+        "promise": "thought<output.max (budget 600 tokens)",
+      },
+      {
+        "left": "(live count)",
+        "promise": "speed>=50tps",
+      },
+      {
+        "left": "(live count)",
+        "promise": "privacy=full (zdr list)",
+      },
+    ],
+    "ranked": "(live rows, keys: tag, estUsd, tps, verdict)",
+    "sort": "throughput",
+  },
+  "generationId": "(live id)",
+  "provider": "(live host)",
+}
+`;
+
+exports[`getBrainAtomsByOpenRouter.acceptance given: [case2c] the preferred floor, fastest first, asked with a thought budget when: [t0] it is asked with effort: { budget: { tokens: 600 } } then: the token counts a caller reads, live values masked, match snapshot 1`] = `
+{
+  "cache": {
+    "get": "(live count)",
+    "set": "(live count)",
+  },
+  "input": "(live count)",
+  "output": "(live count)",
+  "thought": "(live count)",
+}
+`;
+
+exports[`getBrainAtomsByOpenRouter.acceptance given: [case2d] a bare tier, asked with a thought level when: [t0] it is asked with effort: 'low' then: the supply report a caller audits matches snapshot 1`] = `
+{
+  "attempts": "(live hops; last = served)",
+  "choice": {
+    "funnel": [
+      {
+        "left": "(live count)",
+        "promise": "all endpoints",
+      },
+      {
+        "left": "(live count)",
+        "promise": "supports(reasoning)",
+      },
+      {
+        "left": "(live count)",
+        "promise": "speed>=50tps",
+      },
+      {
+        "left": "(live count)",
+        "promise": "privacy=full (zdr list)",
+      },
+    ],
+    "ranked": "(live rows, keys: tag, estUsd, tps, verdict)",
+    "sort": null,
+  },
+  "generationId": "(live id)",
+  "provider": "(live host)",
+}
+`;
+
+exports[`getBrainAtomsByOpenRouter.acceptance given: [case2d] a bare tier, asked with a thought level when: [t0] it is asked with effort: 'low' then: the token counts a caller reads, live values masked, match snapshot 1`] = `
+{
+  "cache": {
+    "get": "(live count)",
+    "set": "(live count)",
+  },
+  "input": "(live count)",
+  "output": "(live count)",
+  "thought": "(live count)",
+}
+`;
+
+exports[`getBrainAtomsByOpenRouter.acceptance given: [case2e] a bare tier with only a sort word, asked live when: [t0] it is asked then: the supply report a caller audits matches snapshot 1`] = `
+{
+  "attempts": "(live hops; last = served)",
+  "choice": {
+    "funnel": [
+      {
+        "left": "(live count)",
+        "promise": "all endpoints",
+      },
+      {
+        "left": "(live count)",
+        "promise": "speed>=50tps",
+      },
+      {
+        "left": "(live count)",
+        "promise": "privacy=full (zdr list)",
+      },
+    ],
+    "ranked": "(live rows, keys: tag, estUsd, tps, verdict)",
+    "sort": "throughput",
+  },
+  "generationId": "(live id)",
+  "provider": "(live host)",
+}
+`;
+
+exports[`getBrainAtomsByOpenRouter.acceptance given: [case2f] a sort with no floor, asked live when: [t0] it is asked then: the supply report a caller audits matches snapshot 1`] = `
+{
+  "attempts": "(live hops; last = served)",
+  "choice": {
+    "funnel": [
+      {
+        "left": "(live count)",
+        "promise": "all endpoints",
+      },
+      {
+        "left": "(live count)",
+        "promise": "supports(response_format)",
+      },
+      {
+        "left": "(live count)",
+        "promise": "supports(structured_outputs)",
+      },
+      {
+        "left": "(live count)",
+        "promise": "privacy=full (zdr list)",
+      },
+    ],
+    "ranked": "(live rows, keys: tag, estUsd, tps, verdict)",
+    "sort": "throughput",
   },
   "generationId": "(live id)",
   "provider": "(live host)",
@@ -63,6 +221,7 @@ exports[`getBrainAtomsByOpenRouter.acceptance given: [case3] an id this package 
         },
       ],
       "ranked": "(live rows, keys: tag, estUsd, tps, verdict)",
+      "sort": null,
     },
     "generationId": "(live id)",
     "provider": "(live host)",
@@ -93,6 +252,7 @@ valid words, joined by '&' in any order:
   - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
   - privacy=full
   - price.max={N}usd/M
+  - sort=price|throughput|latency   (latency: only without floor)
 
 {
   "word": "cheap"
@@ -128,7 +288,11 @@ exports[`getBrainAtomsByOpenRouter.acceptance given: [case8] the preferred floor
       },
       {
         "left": "(live count)",
-        "promise": "supports(response_format,structured_outputs)",
+        "promise": "supports(response_format)",
+      },
+      {
+        "left": "(live count)",
+        "promise": "supports(structured_outputs)",
       },
       {
         "left": "(live count)",
@@ -140,6 +304,7 @@ exports[`getBrainAtomsByOpenRouter.acceptance given: [case8] the preferred floor
       },
     ],
     "ranked": "(live rows, keys: tag, estUsd, tps, verdict)",
+    "sort": null,
   },
   "generationId": "(live id)",
   "provider": "(live host)",
@@ -150,7 +315,8 @@ exports[`getBrainAtomsByOpenRouter.acceptance given: [case9] a model that cannot
 "✋ ConstraintError: no endpoint of (a live model id) keeps every promise. no call was sent.
 
     (live count) ← all endpoints
-    (live count) ← supports(response_format,structured_outputs)
+    (live count) ← supports(response_format)
+    (live count) ← supports(structured_outputs)
 
 each endpoint, cheapest input rate first, and the promise it fails:
   (a live endpoint row)
@@ -214,8 +380,114 @@ exports[`getBrainAtomsByOpenRouter.acceptance given: [case13] a price bound a ho
       },
     ],
     "ranked": "(live rows, keys: tag, estUsd, tps, verdict)",
+    "sort": null,
   },
   "generationId": "(live id)",
   "provider": "(live host)",
 }
+`;
+
+exports[`getBrainAtomsByOpenRouter.acceptance given: [case14] an effort level this brain does not list when: [t0] it is asked then: the refusal a human reads matches snapshot 1`] = `
+"✋ ConstraintError: invalid effort for openrouter/deepseek/flash: level not in minimal | low | medium | high
+  got: effort = 'extreme'
+
+valid shapes, one of:
+  - effort: 'minimal' | 'low' | 'medium' | 'high'   (≡ { level: … })
+  - effort: { budget: { tokens: N } }   N a positive integer"
+`;
+
+exports[`getBrainAtomsByOpenRouter.acceptance given: [case15] an effort with both a level and a budget when: [t0] it is asked then: the refusal a human reads matches snapshot 1`] = `
+"✋ ConstraintError: invalid effort for openrouter/deepseek/flash: both level and budget; openrouter takes one
+  got: effort = {"level":"low","budget":{"tokens":1000}}
+
+valid shapes, one of:
+  - effort: 'minimal' | 'low' | 'medium' | 'high'   (≡ { level: … })
+  - effort: { budget: { tokens: N } }   N a positive integer"
+`;
+
+exports[`getBrainAtomsByOpenRouter.acceptance given: [case16] a latency sort under floor when: [t0] it is asked then: the refusal a human reads matches snapshot 1`] = `
+"✋ ConstraintError: invalid openrouter supply filter 'sort=latency': the floor walk cannot order by latency
+
+fix: let openrouter order by latency, with no floor —
+  …/privacy=full&sort=latency   (a sort word alone keeps the default floor, so name a filter word)
+or keep the floor, ordered by throughput —
+  …/floor&sort=throughput
+
+valid words, joined by '&' in any order:
+  - floor
+  - speed=min{N}tps · speed.min={N}tps
+  - region=usa
+  - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
+  - privacy=full
+  - price.max={N}usd/M
+  - sort=price|throughput|latency   (latency: only without floor)"
+`;
+
+exports[`getBrainAtomsByOpenRouter.acceptance given: [case17] a sort word openrouter does not know when: [t0] it is asked then: the refusal a human reads matches snapshot 1`] = `
+"✋ ConstraintError: invalid openrouter supply filter 'sort=fastest': unknown sort
+
+valid words, joined by '&' in any order:
+  - floor
+  - speed=min{N}tps · speed.min={N}tps
+  - region=usa
+  - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
+  - privacy=full
+  - price.max={N}usd/M
+  - sort=price|throughput|latency   (latency: only without floor)"
+`;
+
+exports[`getBrainAtomsByOpenRouter.acceptance given: [case18] a thought budget past every host output limit when: [t0] it is asked then: the refusal a human reads matches snapshot 1`] = `
+"✋ ConstraintError: no endpoint of (a live model id) keeps every promise. no call was sent.
+
+    (live count) ← all endpoints
+    (live count) ← supports(reasoning)
+    (live count) ← thought<output.max (budget 10,000,000 tokens)
+    (live count) ← speed>=50tps
+    (live count) ← privacy=full (zdr list)
+
+each endpoint, cheapest input rate first, and the promise it fails:
+  (a live endpoint row)
+
+fix: lower effort.budget.tokens below (live limit), the largest output limit a host lists, so the answer has room"
+`;
+
+exports[`getBrainAtomsByOpenRouter.acceptance given: [case19] an effort on a model whose hosts list no reasoning when: [t0] it is asked then: the refusal a human reads matches snapshot 1`] = `
+"✋ ConstraintError: no endpoint of (a live model id) keeps every promise. no call was sent.
+
+    (live count) ← all endpoints
+    (live count) ← supports(reasoning)
+    (live count) ← speed>=50tps
+    (live count) ← privacy=full (zdr list)
+
+each endpoint, cheapest input rate first, and the promise it fails:
+  (a live endpoint row)
+
+fix: no endpoint supports(reasoning). drop the effort from the ask, or choose a model whose hosts list reasoning"
+`;
+
+exports[`getBrainAtomsByOpenRouter.acceptance given: [case20] a latency sort alone, under the default floor when: [t0] it is asked then: the refusal a human reads matches snapshot 1`] = `
+"✋ ConstraintError: invalid openrouter supply filter 'sort=latency': the floor walk cannot order by latency
+
+fix: let openrouter order by latency, with no floor —
+  …/privacy=full&sort=latency   (a sort word alone keeps the default floor, so name a filter word)
+or keep the floor, ordered by throughput —
+  …/floor&sort=throughput
+
+valid words, joined by '&' in any order:
+  - floor
+  - speed=min{N}tps · speed.min={N}tps
+  - region=usa
+  - precision=int4|int8|fp4|fp6|fp8|fp16|bf16|fp32
+  - privacy=full
+  - price.max={N}usd/M
+  - sort=price|throughput|latency   (latency: only without floor)"
+`;
+
+exports[`getBrainAtomsByOpenRouter.acceptance given: [case21] a thought budget of zero tokens when: [t0] it is asked then: the refusal a human reads matches snapshot 1`] = `
+"✋ ConstraintError: invalid effort for openrouter/deepseek/flash: tokens must be a positive integer
+  got: effort = {"budget":{"tokens":0}}
+
+valid shapes, one of:
+  - effort: 'minimal' | 'low' | 'medium' | 'high'   (≡ { level: … })
+  - effort: { budget: { tokens: N } }   N a positive integer"
 `;

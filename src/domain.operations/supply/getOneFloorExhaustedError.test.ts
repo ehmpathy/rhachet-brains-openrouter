@@ -101,6 +101,8 @@ describe('getOneFloorExhaustedError', () => {
         attempts: ATTEMPTS,
         retryAfter: thisCase.given.retryAfter,
         faultLast: thisCase.given.faultLast,
+        untried: 0,
+        bound: { minutes: 10 },
       });
       expect(error).toBeInstanceOf(MalfunctionError);
       expect(error.message).toContain(thisCase.expect.fix);
@@ -117,4 +119,49 @@ describe('getOneFloorExhaustedError', () => {
       expect(error.message).toMatchSnapshot();
     }),
   );
+
+  // .why = a walk that stopped on stalls names how many it waited out and left untried
+  test('a walk stopped on stalls names the stalls and the hosts left untried', () => {
+    const error = getOneFloorExhaustedError({
+      model: 'deepseek/deepseek-v4.1-flash',
+      attempts: [
+        { tag: 'cheap/fp8', outcome: 'stalled' },
+        { tag: 'mid/fp8', outcome: 'stalled' },
+      ],
+      retryAfter: null,
+      faultLast: null,
+      untried: 3,
+      bound: { minutes: 10 },
+    });
+    expect(error.message).toContain(
+      'the walk stopped after 2 stalled hosts, with 3 untried',
+    );
+    expect(error.message).toMatchSnapshot();
+  });
+
+  // .why = case=9: a stall names the bound, and names a thought cap as the lever for a slow answer
+  test('a walk with a stall names the bound and the thought cap', () => {
+    const error = getOneFloorExhaustedError({
+      model: 'deepseek/deepseek-v4.1-flash',
+      attempts: [{ tag: 'cheap/fp8', outcome: 'stalled' }],
+      retryAfter: null,
+      faultLast: null,
+      untried: 0,
+      bound: { minutes: 10 },
+    });
+    expect(error.message).toContain('inside 10m');
+    expect(error.message).toContain('cap thought (effort on the ask)');
+  });
+
+  test('a walk with no stall names no thought cap', () => {
+    const error = getOneFloorExhaustedError({
+      model: 'deepseek/deepseek-v4.1-flash',
+      attempts: ATTEMPTS,
+      retryAfter: null,
+      faultLast: null,
+      untried: 0,
+      bound: { minutes: 10 },
+    });
+    expect(error.message).not.toContain('cap thought');
+  });
 });

@@ -11,5 +11,6 @@ export type OpenRouterEndpoint = {
   pricePromptUsdPerToken: number;
   priceCompletionUsdPerToken: number;
   throughputTps: number | null;
+  maxCompletionTokens: number | null; // the most output tokens the host returns; null where openrouter lists none
   zdr: boolean; // on openrouter's zero-data-retention list
 };

@@ -67,10 +67,14 @@ const asStableSupply = (input: { supply: SupplyReport }) => ({
   choice: input.supply.choice
     ? {
         tokensEstimate: input.supply.choice.tokensEstimate,
-        funnel: input.supply.choice.funnel.map((step) => ({
-          promise: step.promise,
-          left: '(live count)',
-        })),
+        // .note = the honors(json) step shows only when this machine's 7-day memory holds a
+        //         host, so its presence is machine state; it is dropped from the snap
+        funnel: input.supply.choice.funnel
+          .filter((step) => !step.promise.startsWith('honors(json)'))
+          .map((step) => ({
+            promise: step.promise,
+            left: '(live count)',
+          })),
         ranked: input.supply.choice.ranked.length
           ? `(live rows, keys: ${Object.keys(input.supply.choice.ranked[0]!).join(', ')})`
           : [],

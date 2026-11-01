@@ -1,0 +1,53 @@
+// Jest Snapshot v1, https://jestjs.io/docs/snapshot-testing
+
+exports[`getOneNoQualifiedEndpointError under sort=throughput, the table heading reads fastest first 1`] = `
+"✋ ConstraintError: no endpoint of deepseek/deepseek-v4.1-flash keeps every promise. no call was sent.
+
+    2 ← all endpoints
+    0 ← privacy=full (zdr list)
+
+each endpoint, fastest first, and the promise it fails:
+  $0.1/M     cheap                        ✗ privacy=full (zdr list)
+  no rate    dear                         ✗ privacy=full (zdr list)
+
+fix: drop or loosen the promise where the count reaches 0
+
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "filters": {
+    "floor": false,
+    "speedMinTps": null,
+    "region": null,
+    "precision": null,
+    "privacy": "full",
+    "priceMaxUsdPerMillion": null,
+    "sort": "throughput"
+  }
+}"
+`;
+
+exports[`getOneNoQualifiedEndpointError with no sort, the table heading reads cheapest first 1`] = `
+"✋ ConstraintError: no endpoint of deepseek/deepseek-v4.1-flash keeps every promise. no call was sent.
+
+    2 ← all endpoints
+    0 ← privacy=full (zdr list)
+
+each endpoint, cheapest input rate first, and the promise it fails:
+  $0.1/M     cheap                        ✗ privacy=full (zdr list)
+  no rate    dear                         ✗ privacy=full (zdr list)
+
+fix: drop or loosen the promise where the count reaches 0
+
+{
+  "model": "deepseek/deepseek-v4.1-flash",
+  "filters": {
+    "floor": false,
+    "speedMinTps": null,
+    "region": null,
+    "precision": null,
+    "privacy": "full",
+    "priceMaxUsdPerMillion": null,
+    "sort": null
+  }
+}"
+`;
