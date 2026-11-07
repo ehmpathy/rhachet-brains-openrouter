@@ -85,8 +85,31 @@ describe('asBrainSizeTokens', () => {
           input: 0,
           output: 0,
           cache: { get: 0, set: 0 },
+          thought: null,
         });
       });
+    });
+  });
+
+  given('[case4b] a host that reports thought tokens', () => {
+    when('[t0] completion_tokens_details carries reasoning_tokens', () => {
+      then(
+        'thought reads the count; a host that reports none reads null',
+        () => {
+          const reported = asBrainSizeTokens({
+            usage: {
+              prompt_tokens: 100,
+              completion_tokens: 900,
+              completion_tokens_details: { reasoning_tokens: 640 },
+            },
+          });
+          expect(reported.thought).toEqual(640);
+          const silent = asBrainSizeTokens({
+            usage: { prompt_tokens: 100, completion_tokens: 900 },
+          });
+          expect(silent.thought).toEqual(null);
+        },
+      );
     });
   });
 

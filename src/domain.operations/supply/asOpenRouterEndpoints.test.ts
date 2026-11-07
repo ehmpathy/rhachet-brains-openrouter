@@ -62,7 +62,25 @@ describe('asOpenRouterEndpoints', () => {
       pricePromptUsdPerToken: 0.00000027,
       priceCompletionUsdPerToken: 0.0000011,
       throughputTps: 88,
+      maxCompletionTokens: null,
     });
+  });
+
+  test('the output limit reads max_completion_tokens, else null', () => {
+    const [listed] = asOpenRouterEndpoints({
+      body: {
+        data: {
+          endpoints: [
+            {
+              ...genRawEndpoint({ throughput: 88 }),
+              max_completion_tokens: 384_000,
+            },
+          ],
+        },
+      },
+      model: 'deepseek/deepseek-v4.1-flash',
+    });
+    expect(listed?.maxCompletionTokens).toEqual(384_000);
   });
 
   test('an endpoint with no tag is tagged by its provider name', () => {

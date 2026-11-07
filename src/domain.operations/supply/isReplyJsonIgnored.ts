@@ -1,20 +1,7 @@
 import type OpenAI from 'openai';
 
 import { asReplyChoice } from './asReplyChoice';
-
-/**
- * .what = whether a reply's text parses as json
- * .why = only a SyntaxError reads as not-json; every other error rethrows
- */
-const isJsonText = (input: { content: string }): boolean => {
-  try {
-    JSON.parse(input.content);
-    return true;
-  } catch (error) {
-    if (!(error instanceof SyntaxError)) throw error;
-    return false;
-  }
-};
+import { isJsonText } from './isJsonText';
 
 /**
  * .what = did the host ignore the json schema asked for, and answer in prose

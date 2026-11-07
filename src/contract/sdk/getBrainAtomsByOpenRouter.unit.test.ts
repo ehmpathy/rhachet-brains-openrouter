@@ -1,6 +1,6 @@
 import { UnexpectedCodePathError } from 'helpful-errors';
 import { type BrainAtom, genContextBrain } from 'rhachet';
-import { given, then, when } from 'test-fns';
+import { given, then, useThen, when } from 'test-fns';
 
 import { SPEC_ESTIMATE_BY_TIER } from '../../domain.operations/atom/BrainAtom.config';
 import { TIER_BY_BARE_SLUG } from '../../domain.operations/atom/slug/AtomSlug.bare';
@@ -15,10 +15,10 @@ import { getBrainAtomsByOpenRouter } from './index';
  *        the maps, so a map that quietly lost a row would shrink the registry
  *        and a derived check would agree. a literal cannot agree.
  *
- * 🔴 .note = only the tier names. each reads the newest model of its line from
- *           openrouter's catalog, so it never needs to retire. a model id is
- *           openrouter's to withdraw, so none is listed or promised. this list
- *           only grows: never delete a row.
+ * 🔴 .note = the tier names and the listed filtered slugs. each reads the newest
+ *           model of its line from openrouter's catalog, so it never needs to
+ *           retire. a model id is openrouter's to withdraw, so none is listed or
+ *           promised. this list only grows: never delete a row.
  */
 const SLUGS_PROMISED_FOREVER = [
   'openrouter/deepseek/pro',
@@ -26,6 +26,8 @@ const SLUGS_PROMISED_FOREVER = [
   'openrouter/moonshotai/pro',
   'openrouter/z-ai/pro',
   'openrouter/z-ai/flash',
+  'openrouter/deepseek/flash/floor&speed=min50tps&privacy=full',
+  'openrouter/deepseek/flash/floor&speed=min50tps&privacy=full&sort=throughput',
 ] as const;
 
 /**
@@ -103,13 +105,20 @@ describe('getBrainAtomsByOpenRouter', () => {
             );
         });
 
-        then('every tier name listed is promised forever', () => {
-          // .why = a tier listed but not in the literal list is a promise
-          //        made with no clamp; add it above in the same change
-          expect(Object.keys(TIER_BY_BARE_SLUG).sort()).toEqual(
-            [...SLUGS_PROMISED_FOREVER].sort(),
-          );
-        });
+        then(
+          'the names promised forever are exactly the tiers and the listed filters',
+          () => {
+            // .why = an exact match clamps both ways: a tier or filter listed with no
+            //        promise fails, and a promise with no listed name fails. add a
+            //        row above in the same change that lists a name
+            expect([...SLUGS_PROMISED_FOREVER].sort()).toEqual(
+              [
+                ...Object.keys(TIER_BY_BARE_SLUG),
+                ...SLUGS_FILTERED_LISTED,
+              ].sort(),
+            );
+          },
+        );
       },
     );
 
@@ -132,14 +141,36 @@ describe('getBrainAtomsByOpenRouter', () => {
       'openrouter/deepseek/flash/floor&speed=min50tps&privacy=full';
 
     when('[t0] a consumer chooses it by exact name via genContextBrain', () => {
+      const brain = useThen('it is chosen', () =>
+        getOneBrainChosen({ choice }),
+      );
+
       then('it is found, under the exact name chosen', () => {
-        expect(getOneBrainChosen({ choice }).slug).toEqual(choice);
+        expect(brain.slug).toEqual(choice);
       });
 
       then('it carries the flash tier estimate', () => {
-        expect(getOneBrainChosen({ choice }).spec).toEqual(
-          SPEC_ESTIMATE_BY_TIER.flash,
-        );
+        expect(brain.spec).toEqual(SPEC_ESTIMATE_BY_TIER.flash);
+      });
+    });
+  });
+
+  // .why = case=4 [t3]: the floor's sort=throughput twin is choosable by name too
+  given('[case3] the preferred floor, fastest host first', () => {
+    const choice =
+      'openrouter/deepseek/flash/floor&speed=min50tps&privacy=full&sort=throughput';
+
+    when('[t0] a consumer chooses it by exact name via genContextBrain', () => {
+      const brain = useThen('it is chosen', () =>
+        getOneBrainChosen({ choice }),
+      );
+
+      then('it is found, under the exact name chosen', () => {
+        expect(brain.slug).toEqual(choice);
+      });
+
+      then('it carries the flash tier estimate', () => {
+        expect(brain.spec).toEqual(SPEC_ESTIMATE_BY_TIER.flash);
       });
     });
   });

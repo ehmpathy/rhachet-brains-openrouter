@@ -1,6 +1,8 @@
 import { asIsoPrice, priceDivide } from 'iso-price';
 import { BrainSpec } from 'rhachet/brains';
 
+import { EFFORT_SUPPORTED_OPENROUTER } from '../EFFORT_SUPPORTED_OPENROUTER';
+
 /**
  * .what = a slug that names any openrouter model, by openrouter's own id
  * .why = openrouter lists hundreds of models and adds more each week; a caller
@@ -44,6 +46,7 @@ export const asUnlistedModelId = (input: { base: string }): string | null => {
  * .note = `cutoff` is an upper bound: the date this estimate was set
  */
 export const SPEC_ESTIMATE_UNLISTED = new BrainSpec({
+  supports: { effort: EFFORT_SUPPORTED_OPENROUTER },
   cost: {
     time: {
       speed: { tokens: 50, per: { seconds: 1 } },

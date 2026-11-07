@@ -2,6 +2,7 @@ import { MalfunctionError } from 'helpful-errors';
 import OpenAI from 'openai';
 import { getError, given, then, useThen, when } from 'test-fns';
 
+import { HostFaultError } from '../../domain.objects/HostFaultError';
 import type { OpenRouterEndpoint } from '../../domain.objects/OpenRouterEndpoint';
 import type { SupplyFilters } from './asSupplyFilters';
 import { getOneAdmittedSetCompletion } from './getOneAdmittedSetCompletion';
@@ -13,10 +14,15 @@ import { getOneAdmittedSetCompletion } from './getOneAdmittedSetCompletion';
  * .note = 'unnamed429' is openrouter's own normalized throttle: no name, no mark;
  *         'markedUnnamed429' is a host's throttle, marked, that names no host;
  *         'strangerError400' is a host 400 that names a host outside the set;
- *         'hostError400Bare' is a host 400 with no `retry-after` header
+ *         'hostError400Bare' is a host 400 with no `retry-after` header;
+ *         'bodyCut' ends the body mid-json; 'stall' never answers inside the bound
  */
 type HostBehavior =
   | 'serve'
+  | 'bodyCut'
+  | 'stall'
+  | 500
+  | 502
   | 'hostError400'
   | 'hostError400Bare'
   | 'callerError400'
@@ -69,9 +75,13 @@ const genOpenAiFake = (input: {
   const openai = {
     chat: {
       completions: {
-        create: async (request: {
-          provider: { only: string[]; allow_fallbacks: boolean };
-        }) => {
+        // .note = two positional args, as the sdk's `create(body, options)` takes them
+        create: async (
+          request: {
+            provider: { only: string[]; allow_fallbacks: boolean };
+          },
+          options: { signal: AbortSignal },
+        ) => {
           admits.push({
             only: request.provider.only,
             allowFallbacks: request.provider.allow_fallbacks,
@@ -81,6 +91,21 @@ const genOpenAiFake = (input: {
           if (behavior === undefined)
             throw new Error(`fake: no behavior declared for tag ${tag}`); // a fixture defect, never a host fault
           const headers = new Headers({ 'retry-after': '7' });
+          if (behavior === 'bodyCut')
+            throw new SyntaxError('Unexpected end of JSON input');
+          if (behavior === 'stall')
+            return new Promise((_settle, reject) =>
+              options.signal.addEventListener('abort', () =>
+                reject(new OpenAI.APIUserAbortError()),
+              ),
+            );
+          if (behavior === 500)
+            throw new OpenAI.APIError(
+              500,
+              undefined,
+              'Internal Server Error',
+              new Headers(),
+            );
           if (behavior === 'hostError400Bare')
             throw new OpenAI.APIError(
               400,
@@ -202,6 +227,7 @@ const genEndpoint = (input: { tag: string }): OpenRouterEndpoint => ({
   pricePromptUsdPerToken: 0.00000003,
   priceCompletionUsdPerToken: 0.0000005,
   throughputTps: 120,
+  maxCompletionTokens: null,
   zdr: true,
 });
 
@@ -212,6 +238,7 @@ const FILTERS: SupplyFilters = {
   precision: null,
   privacy: 'full',
   priceMaxUsdPerMillion: null,
+  sort: null,
 };
 
 const MODEL = 'deepseek/deepseek-v4.1-flash';
@@ -240,6 +267,7 @@ const runHop = async (input: {
       attempts: [],
       retryAfter: null,
       faultLast: null,
+      bound: { milliseconds: 50 },
     },
     { openai, sdkOpenRouterEndpoints },
   );
@@ -291,6 +319,7 @@ const runHopToError = async (input: {
         attempts: [],
         retryAfter: null,
         faultLast: null,
+        bound: { milliseconds: 50 },
       },
       { openai, sdkOpenRouterEndpoints },
     ),
@@ -299,6 +328,8 @@ const runHopToError = async (input: {
   return {
     isApiError: error instanceof OpenAI.APIError,
     isMalfunction: error instanceof MalfunctionError,
+    status: error instanceof OpenAI.APIError ? error.status : null,
+    fault: error instanceof HostFaultError ? error.fault : null,
     message: error.message,
     admitted: admits.map((p) => p.only),
     dels,
@@ -716,4 +747,86 @@ describe('getOneAdmittedSetCompletion', () => {
       });
     },
   );
+
+  // .why = a cut body names no host, so no hop can drop the right one; the caller
+  //        reads it named, never a raw SyntaxError (case=9, no floor)
+  given('[case13] the admitted set cuts its reply body', () => {
+    when('[t0] the set is sent', () => {
+      const scene = useThen('it fails loud', async () =>
+        runHopToError({ tags: ['A', 'B'], behaviorByTag: { A: 'bodyCut' } }),
+      );
+
+      then('the caller receives a body-cut HostFaultError, in one send', () => {
+        expect(scene.fault).toEqual('body-cut');
+        expect(scene.admitted).toEqual([['A', 'B']]);
+      });
+
+      then('the message names every admitted host', () => {
+        expect(scene.message).toContain('A');
+        expect(scene.message).toContain('B');
+      });
+
+      then('the message the caller sees matches snapshot', () => {
+        expect(scene.message).toMatchSnapshot();
+      });
+    });
+  });
+
+  // .why = a stall names no host; a walk would wait out one bound per host, so
+  //        the caller reads it named, in one send (case=9, no floor)
+  given('[case14] the admitted set stalls past the bound', () => {
+    when('[t0] the set is sent', () => {
+      const scene = useThen('it fails loud', async () =>
+        runHopToError({ tags: ['A', 'B'], behaviorByTag: { A: 'stall' } }),
+      );
+
+      then('the caller receives a stalled HostFaultError, in one send', () => {
+        expect(scene.fault).toEqual('stalled');
+        expect(scene.admitted).toEqual([['A', 'B']]);
+      });
+
+      then('the message the caller sees matches snapshot', () => {
+        expect(scene.message).toMatchSnapshot();
+      });
+    });
+  });
+
+  // .why = a bare 500 may be openrouter's own fault, which no other host cures,
+  //        so it rethrows untouched, as 0.1.3 (issue #12, F14)
+  given('[case15] the admitted set answers a bare 500', () => {
+    when('[t0] the set is sent', () => {
+      const scene = useThen('it fails', async () =>
+        runHopToError({ tags: ['A', 'B'], behaviorByTag: { A: 500 } }),
+      );
+
+      then('the sdk error is rethrown untouched, in one send', () => {
+        expect(scene.isApiError).toEqual(true);
+        expect(scene.status).toEqual(500);
+        expect(scene.fault).toEqual(null);
+        expect(scene.admitted).toEqual([['A', 'B']]);
+      });
+    });
+  });
+
+  // .why = issue #12 measured 502 and 504 from one upstream while healthy hosts sat
+  //        next. a gateway fault that names its host drops that host, as a 429 does
+  given('[case16] the host openrouter picks answers a named 502', () => {
+    when('[t0] the set is sent', () => {
+      const scene = useThen('it serves', async () =>
+        runHop({ tags: ['A', 'B'], behaviorByTag: { A: 502, B: 'serve' } }),
+      );
+
+      then('it drops the named host and re-sends to the rest', () => {
+        expect(scene.admitted).toEqual([['A', 'B'], ['B']]);
+      });
+
+      then('the dropped host is on record as failed', () => {
+        expect(scene.attempts).toEqual([{ tag: 'A', outcome: 'failed' }]);
+      });
+
+      then('the sends and the trail match snapshot', () => {
+        expect(asStableServe({ scene })).toMatchSnapshot();
+      });
+    });
+  });
 });

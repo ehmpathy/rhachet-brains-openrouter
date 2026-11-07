@@ -14,6 +14,7 @@ const genVerdict = (input: {
     pricePromptUsdPerToken: 0.00000003,
     priceCompletionUsdPerToken: 0.0000005,
     throughputTps: input.tps ?? 80,
+    maxCompletionTokens: null,
     zdr: true,
   } satisfies OpenRouterEndpoint,
   estUsd: 0.0000123456,

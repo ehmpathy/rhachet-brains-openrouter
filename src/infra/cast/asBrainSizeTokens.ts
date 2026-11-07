@@ -1,3 +1,5 @@
+import { asTokensThought } from './asTokensThought';
+
 /**
  * .what = the token counts an openai-compatible response reports
  * .why = openrouter returns these under `usage`, with the cached count nested a
@@ -9,6 +11,7 @@ type UsageOpenAiCompatible =
       prompt_tokens?: number;
       completion_tokens?: number;
       prompt_tokens_details?: { cached_tokens?: number };
+      completion_tokens_details?: { reasoning_tokens?: number | null } | null;
     }
   | undefined;
 
@@ -29,6 +32,9 @@ type UsageOpenAiCompatible =
  * .note = input is clamped at 0, so a provider inconsistency cannot yield a
  *         negative token count, and thus a negative price.
  *
+ * .note = `thought` is carved out of `output`, never added to it: `completion_tokens`
+ *         already bills the thought. null where the host reports none (asTokensThought)
+ *
  * .note = `cache.set` is always 0. no model in this catalog bills a cache
  *         write — its prompt cache fills as a side effect of the read path. the
  *         charge openrouter actually bills rides back as `usage.cost`.
@@ -38,6 +44,7 @@ export const asBrainSizeTokens = (input: {
 }): {
   input: number;
   output: number;
+  thought: number | null;
   cache: { get: number; set: number };
 } => {
   const tokensPrompt = input.usage?.prompt_tokens ?? 0;
@@ -47,6 +54,7 @@ export const asBrainSizeTokens = (input: {
   return {
     input: Math.max(tokensPrompt - tokensCached, 0),
     output: tokensOutput,
+    thought: asTokensThought({ usage: input.usage }),
     cache: { get: tokensCached, set: 0 },
   };
 };

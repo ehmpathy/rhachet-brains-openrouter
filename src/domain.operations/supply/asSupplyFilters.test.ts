@@ -10,6 +10,7 @@ const NONE = {
   precision: null,
   privacy: null,
   priceMaxUsdPerMillion: null,
+  sort: null,
 };
 
 const TEST_CASES_VALID = [
@@ -49,6 +50,27 @@ const TEST_CASES_VALID = [
     given: { segment: 'price.max=0.5usd/M' },
     expect: { ...NONE, priceMaxUsdPerMillion: 0.5 },
   },
+  {
+    description: 'sort=throughput on the reviewer floor (case=4)',
+    given: { segment: 'floor&speed=min50tps&privacy=full&sort=throughput' },
+    expect: {
+      ...NONE,
+      floor: true,
+      speedMinTps: 50,
+      privacy: 'full',
+      sort: 'throughput',
+    },
+  },
+  {
+    description: 'sort=price under floor',
+    given: { segment: 'floor&sort=price' },
+    expect: { ...NONE, floor: true, sort: 'price' },
+  },
+  {
+    description: 'sort=latency with no floor word',
+    given: { segment: 'privacy=full&sort=latency' },
+    expect: { ...NONE, privacy: 'full', sort: 'latency' },
+  },
 ];
 
 const TEST_CASES_INVALID = [
@@ -70,6 +92,11 @@ const TEST_CASES_INVALID = [
   },
   { description: 'unknown precision', given: { segment: 'precision=fp9' } },
   { description: 'floor with a value', given: { segment: 'floor=yes' } },
+  { description: 'unknown sort', given: { segment: 'sort=fastest' } },
+  {
+    description: 'sort=latency under floor',
+    given: { segment: 'floor&sort=latency' },
+  },
 ];
 
 describe('asSupplyFilters', () => {
