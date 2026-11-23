@@ -1,7 +1,8 @@
 import { ConstraintError } from 'helpful-errors';
 import type { IsoDateStamp } from 'iso-time';
 
-import type { OpenRouterCatalogModel } from '../../domain.objects/OpenRouterCatalogModel';
+import type { OpenRouterCatalogModel } from '@src/domain.objects/OpenRouterCatalogModel';
+
 import { getAllSimilarModelIds } from './getAllSimilarModelIds';
 
 /**

@@ -2,11 +2,12 @@ import { ConstraintError } from 'helpful-errors';
 import { BrainAtom } from 'rhachet';
 import { getError, given, then, when } from 'test-fns';
 
-import { SPEC_ESTIMATE_BY_TIER } from '../../domain.operations/atom/BrainAtom.config';
-import { genBrainAtom } from '../../domain.operations/atom/genBrainAtom';
-import { SLUGS_FILTERED_LISTED } from '../../domain.operations/atom/slug/AtomSlug.filtered';
-import { SPEC_ESTIMATE_UNLISTED } from '../../domain.operations/atom/slug/AtomSlug.unlisted';
-import { getAllAtomSlugs } from '../../domain.operations/atom/slug/getAllAtomSlugs';
+import { SPEC_ESTIMATE_BY_TIER } from '@src/domain.operations/atom/BrainAtom.config';
+import { genBrainAtom } from '@src/domain.operations/atom/genBrainAtom';
+import { SLUGS_FILTERED_LISTED } from '@src/domain.operations/atom/slug/AtomSlug.filtered';
+import { SPEC_ESTIMATE_UNLISTED } from '@src/domain.operations/atom/slug/AtomSlug.unlisted';
+import { getAllAtomSlugs } from '@src/domain.operations/atom/slug/getAllAtomSlugs';
+
 import { getBrainAtomsByOpenRouter } from './index';
 
 describe('rhachet-brains-openrouter.unit', () => {

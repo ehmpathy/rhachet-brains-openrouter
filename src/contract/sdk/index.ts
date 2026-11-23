@@ -1,8 +1,8 @@
 import type { BrainAtom } from 'rhachet';
 
-import { genBrainAtom } from '../../domain.operations/atom/genBrainAtom';
-import { SLUGS_FILTERED_LISTED } from '../../domain.operations/atom/slug/AtomSlug.filtered';
-import { getAllAtomSlugs } from '../../domain.operations/atom/slug/getAllAtomSlugs';
+import { genBrainAtom } from '@src/domain.operations/atom/genBrainAtom';
+import { SLUGS_FILTERED_LISTED } from '@src/domain.operations/atom/slug/AtomSlug.filtered';
+import { getAllAtomSlugs } from '@src/domain.operations/atom/slug/getAllAtomSlugs';
 
 /**
  * .what = returns all brain atoms provided by openrouter
@@ -28,7 +28,7 @@ export const getBrainAtomsByOpenRouter = (): BrainAtom[] => [
 ];
 
 // the supply report each ask attaches as `output.supply`
-export type { SupplyReport } from '../../domain.objects/SupplyReport';
+export type { SupplyReport } from '@src/domain.objects/SupplyReport';
 // re-export types for consumer use
 //
 // .note = every name is [...noun][qualifier] — `BrainAtomSlugOpenRouter`, not
@@ -39,14 +39,14 @@ export type { SupplyReport } from '../../domain.objects/SupplyReport';
 export type {
   BrainSuppliesOpenRouter,
   CredsOpenRouter,
-} from '../../domain.operations/atom/BrainAtom.config';
+} from '@src/domain.operations/atom/BrainAtom.config';
 // re-export factory for direct access
-export { genBrainAtom } from '../../domain.operations/atom/genBrainAtom';
+export { genBrainAtom } from '@src/domain.operations/atom/genBrainAtom';
 // the slug vocabulary, so a consumer can name any accepted form
 export type {
   BrainAtomSlugOpenRouter,
   BrainAtomSlugOpenRouterFiltered,
-} from '../../domain.operations/atom/slug/AtomSlug';
-export type { BrainAtomSlugOpenRouterBare } from '../../domain.operations/atom/slug/AtomSlug.bare';
+} from '@src/domain.operations/atom/slug/AtomSlug';
+export type { BrainAtomSlugOpenRouterBare } from '@src/domain.operations/atom/slug/AtomSlug.bare';
 // the unlisted form, so a consumer can name any openrouter id with no release
-export type { BrainAtomSlugOpenRouterUnlisted } from '../../domain.operations/atom/slug/AtomSlug.unlisted';
+export type { BrainAtomSlugOpenRouterUnlisted } from '@src/domain.operations/atom/slug/AtomSlug.unlisted';

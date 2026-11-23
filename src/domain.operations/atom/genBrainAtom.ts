@@ -18,15 +18,16 @@ import type { Artifact } from 'rhachet-artifact';
 import type { GitFile } from 'rhachet-artifact-git';
 import { z } from 'zod';
 
-import { asBrainPlugToolInvocationFromOpenRouter } from '../../infra/cast/asBrainPlugToolInvocationFromOpenRouter';
-import { asOpenRouterMessages } from '../../infra/cast/asOpenRouterMessages';
-import { asOpenRouterToolDef } from '../../infra/cast/asOpenRouterToolDef';
-import { asOutputFromContent } from '../../infra/cast/asOutputFromContent';
-import { asToolSlugByName } from '../../infra/cast/asToolSlugByName';
-import { isStringLikeJsonSchema } from '../../infra/cast/isStringLikeJsonSchema';
-import { asReplyChoice } from '../supply/asReplyChoice';
-import { getOneSuppliedCompletion } from '../supply/getOneSuppliedCompletion';
-import { sdkOpenRouterEndpoints } from '../supply/sdkOpenRouterEndpoints';
+import { asReplyChoice } from '@src/domain.operations/supply/asReplyChoice';
+import { getOneSuppliedCompletion } from '@src/domain.operations/supply/getOneSuppliedCompletion';
+import { sdkOpenRouterEndpoints } from '@src/domain.operations/supply/sdkOpenRouterEndpoints';
+import { asBrainPlugToolInvocationFromOpenRouter } from '@src/infra/cast/asBrainPlugToolInvocationFromOpenRouter';
+import { asOpenRouterMessages } from '@src/infra/cast/asOpenRouterMessages';
+import { asOpenRouterToolDef } from '@src/infra/cast/asOpenRouterToolDef';
+import { asOutputFromContent } from '@src/infra/cast/asOutputFromContent';
+import { asToolSlugByName } from '@src/infra/cast/asToolSlugByName';
+import { isStringLikeJsonSchema } from '@src/infra/cast/isStringLikeJsonSchema';
+
 import { asAskNeeds } from './asAskNeeds';
 import { asAtomTarget } from './asAtomTarget';
 import { asBrainSizeForAsk } from './asBrainSizeForAsk';

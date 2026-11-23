@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
-import type { OpenRouterEndpoint } from '../../domain.objects/OpenRouterEndpoint';
+import type { OpenRouterEndpoint } from '@src/domain.objects/OpenRouterEndpoint';
+
 import { asOpenRouterBodyChecked } from './asOpenRouterBodyChecked';
 
 /**

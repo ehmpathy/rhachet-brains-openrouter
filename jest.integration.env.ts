@@ -1,11 +1,13 @@
-import { execSync } from 'child_process';
-import { existsSync, readFileSync } from 'fs';
-import { join } from 'path';
-import util from 'util';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import util from 'node:util';
 
-import { keyrack } from 'rhachet/keyrack';
+import { jest } from '@jest/globals';
+import { ConstraintError } from 'helpful-errors';
 
-// eslint-disable-next-line no-undef
+import { useTestdbPortOverride } from './src/.test/assets/database/useTestdbPortOverride';
+import { useWakeOfTestdb } from './src/.test/useWakeOfTestdb';
+
 jest.setTimeout(90000); // since we're calling downstream apis
 
 // set console.log to not truncate nested objects
@@ -16,7 +18,10 @@ util.inspect.defaultOptions.depth = 5;
  * .why = prevent confusion and hard-to-debug errors from running tests in the wrong directory
  */
 if (!existsSync(join(process.cwd(), 'package.json')))
-  throw new Error('no package.json found in cwd. are you @gitroot?');
+  throw new ConstraintError(
+    'no package.json found in cwd — run the integration suite from the git root',
+    { cwd: process.cwd() },
+  );
 
 /**
  * sanity check that unit tests are only run the 'test' environment
@@ -27,73 +32,26 @@ if (!existsSync(join(process.cwd(), 'package.json')))
  */
 if (
   (process.env.NODE_ENV !== 'test' ||
-    (process.env.STAGE && process.env.STAGE !== 'test')) &&
-  process.env.I_KNOW_WHAT_IM_DOING !== 'true'
+    (process.env.CONFIG && process.env.CONFIG !== 'test')) &&
+  process.env.I_KNOW_THE_RISKS !== 'true'
 )
-  throw new Error(`integration.test is not targeting stage 'test'`);
-
-/**
- * .what = verify that the env has sufficient auth to run the tests if aws is used; otherwise, fail fast
- * .why =
- *   - prevent time wasted waiting on tests to fail due to lack of credentials
- *   - prevent time wasted debugging tests which are failing due to hard-to-read missed credential errors
- */
-const declapractUsePath = join(process.cwd(), 'declapract.use.yml');
-const declapractUseContent = existsSync(declapractUsePath)
-  ? readFileSync(declapractUsePath, 'utf8')
-  : '';
-const requiresAwsAuth = declapractUseContent.includes('awsAccountId');
-if (
-  requiresAwsAuth &&
-  !(process.env.AWS_PROFILE || process.env.AWS_ACCESS_KEY_ID)
-)
-  throw new Error(
-    'no aws credentials present. please authenticate with aws to run integration tests',
+  throw new ConstraintError(
+    `integration.test config must be 'test' — set NODE_ENV=test and CONFIG=test (or I_KNOW_THE_RISKS=true to override)`,
+    { nodeEnv: process.env.NODE_ENV ?? null, config: process.env.CONFIG ?? null },
   );
 
 /**
- * .what = verify that the testdb has been provisioned if a databaseUserName is declared
- * .why =
- *   - prevent time wasted waiting on tests to fail due to missing testdb
- *   - prevent confusing "password authentication failed" errors when testdb isn't running or was provisioned for a different repo
+ * .what = declare this checkout's testdb port as TESTDB_PORT, before any test opens a connection.
+ * .why = a worktree's testdb binds a port of its own; the app dials TESTDB_PORT under test access,
+ *        so a worktree's suite reaches its own db, never another checkout's.
  */
-const requiresTestDb = declapractUseContent.includes('databaseUserName');
-if (requiresTestDb) {
-  const testConfigPath = join(process.cwd(), 'config', 'test.json');
-  if (!existsSync(testConfigPath))
-    throw new Error(
-      'config/test.json not found but serviceUser is declared in declapract.use.yml',
-    );
-  const testConfig = JSON.parse(readFileSync(testConfigPath, 'utf8'));
-  if (
-    !testConfig.database?.tunnel?.local ||
-    !testConfig.database?.role?.crud ||
-    !testConfig.database?.target?.database
-  )
-    throw new Error(
-      'config/test.json database.tunnel.local, database?.role?.crud, or database?.target?.database not found but expected',
-    );
-  try {
-    execSync(
-      `PGPASSWORD="${testConfig.database.role.crud.password}" psql -h ${testConfig.database.tunnel.local.host} -p ${testConfig.database.tunnel.local.port} -U ${testConfig.database.role.crud.username} -d ${testConfig.database.target.database} -c "SELECT 1" > /dev/null 2>&1`,
-      { timeout: 3000 },
-    );
-  } catch {
-    throw new Error(
-      `did you forget to \`npm run start:testdb\`? cant connect to database`,
-    );
-  }
-}
+useTestdbPortOverride();
 
 /**
- * .what = source credentials from keyrack for test env
- * .why =
- *   - auto-inject keys into process.env
- *
- * .note = lenient, since the extended role keyracks declare keys this repo
- *         never reads (e.g. the mechanic role's provider key). each test that
- *         needs OPENROUTER_API_KEY still fails loud with a ConstraintError
+ * .what = preflight the LOCAL testdb when this service declares its own db (databaseUserName).
+ * .why = prevent time wasted on a suite that fails deep in a query because the local testdb was never
+ *        provisioned, or was provisioned for a different repo; useWakeOfTestdb fails loud and names
+ *        the fix. it is the LOCAL own-db half; the shared prep cluster its peers query is woken by
+ *        useWakeOfLivedb in globalSetup, since both test and prep access reach the prep peers.
  */
-const keyrackYmlPath = join(process.cwd(), '.agent/keyrack.yml');
-if (existsSync(keyrackYmlPath))
-  keyrack.source({ env: 'test', owner: 'ehmpath', mode: 'lenient' });
+useWakeOfTestdb();

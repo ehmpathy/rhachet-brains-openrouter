@@ -11,7 +11,8 @@ import { genArtifactGitFile } from 'rhachet-artifact-git';
 import { getError, given, then, useThen, when } from 'test-fns';
 import { z } from 'zod';
 
-import { TEST_ASSETS_DIR } from '../../.test/assets/dir';
+import { TEST_ASSETS_DIR } from '@src/.test/assets/dir';
+
 import type { BrainSuppliesOpenRouter } from './BrainAtom.config';
 import { genBrainAtom } from './genBrainAtom';
 import type { BrainAtomSlugOpenRouter } from './slug/AtomSlug';

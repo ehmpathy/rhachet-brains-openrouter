@@ -1,6 +1,6 @@
 import type { BrainSpec } from 'rhachet/brains';
 
-import { SPEC_ESTIMATE_BY_TIER } from '../BrainAtom.config';
+import { SPEC_ESTIMATE_BY_TIER } from '@src/domain.operations/atom/BrainAtom.config';
 
 /**
  * .what = the listed openrouter atom slugs — `openrouter/{author}/{tier}`

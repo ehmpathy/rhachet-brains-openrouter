@@ -5,8 +5,9 @@ import { getSdkCredsFromBrainSupplies } from 'rhachet/brains';
 import { given, then, useThen, when } from 'test-fns';
 import { z } from 'zod';
 
-import type { SupplyReport } from '../../domain.objects/SupplyReport';
-import { sdkOpenRouterEndpoints } from '../supply/sdkOpenRouterEndpoints';
+import type { SupplyReport } from '@src/domain.objects/SupplyReport';
+import { sdkOpenRouterEndpoints } from '@src/domain.operations/supply/sdkOpenRouterEndpoints';
+
 import type { BrainSuppliesOpenRouter } from './BrainAtom.config';
 import { genBrainAtom } from './genBrainAtom';
 

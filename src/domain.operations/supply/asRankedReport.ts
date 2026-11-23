@@ -1,5 +1,5 @@
-import type { OpenRouterEndpoint } from '../../domain.objects/OpenRouterEndpoint';
-import type { SupplyChoice } from '../../domain.objects/SupplyChoice';
+import type { OpenRouterEndpoint } from '@src/domain.objects/OpenRouterEndpoint';
+import type { SupplyChoice } from '@src/domain.objects/SupplyChoice';
 
 /**
  * .what = how many rows past the winner the report keeps

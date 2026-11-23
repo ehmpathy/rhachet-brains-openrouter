@@ -1,7 +1,8 @@
 import { asIsoDateStamp, asIsoTimeStamp } from 'iso-time';
 import { given, then, when } from 'test-fns';
 
-import type { OpenRouterCatalogModel } from '../../../domain.objects/OpenRouterCatalogModel';
+import type { OpenRouterCatalogModel } from '@src/domain.objects/OpenRouterCatalogModel';
+
 import {
   type BrainAtomSlugOpenRouterBare,
   TIER_BY_BARE_SLUG,

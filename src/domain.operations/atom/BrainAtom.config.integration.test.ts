@@ -9,7 +9,8 @@ import {
 import OpenAI from 'openai';
 import { given, then, useThen, when } from 'test-fns';
 
-import { sdkOpenRouterEndpoints } from '../supply/sdkOpenRouterEndpoints';
+import { sdkOpenRouterEndpoints } from '@src/domain.operations/supply/sdkOpenRouterEndpoints';
+
 import { getOneTierModel } from './getOneTierModel';
 import { TIER_BY_BARE_SLUG } from './slug/AtomSlug.bare';
 import { getAllAtomSlugs } from './slug/getAllAtomSlugs';

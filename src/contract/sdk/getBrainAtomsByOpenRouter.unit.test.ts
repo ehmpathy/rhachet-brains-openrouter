@@ -2,11 +2,12 @@ import { UnexpectedCodePathError } from 'helpful-errors';
 import { type BrainAtom, genContextBrain } from 'rhachet';
 import { given, then, when } from 'test-fns';
 
-import { SPEC_ESTIMATE_BY_TIER } from '../../domain.operations/atom/BrainAtom.config';
-import { TIER_BY_BARE_SLUG } from '../../domain.operations/atom/slug/AtomSlug.bare';
-import { SLUGS_FILTERED_LISTED } from '../../domain.operations/atom/slug/AtomSlug.filtered';
-import { getAllAtomSlugs } from '../../domain.operations/atom/slug/getAllAtomSlugs';
-import { asSlugParts } from '../../domain.operations/supply/asSlugParts';
+import { SPEC_ESTIMATE_BY_TIER } from '@src/domain.operations/atom/BrainAtom.config';
+import { TIER_BY_BARE_SLUG } from '@src/domain.operations/atom/slug/AtomSlug.bare';
+import { SLUGS_FILTERED_LISTED } from '@src/domain.operations/atom/slug/AtomSlug.filtered';
+import { getAllAtomSlugs } from '@src/domain.operations/atom/slug/getAllAtomSlugs';
+import { asSlugParts } from '@src/domain.operations/supply/asSlugParts';
+
 import { getBrainAtomsByOpenRouter } from './index';
 
 /**

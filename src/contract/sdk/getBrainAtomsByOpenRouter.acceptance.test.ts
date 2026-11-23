@@ -13,10 +13,11 @@ import {
 import { getError, given, then, useBeforeAll, useThen, when } from 'test-fns';
 import { z } from 'zod';
 
+import { getOneTierModel } from '@src/domain.operations/atom/getOneTierModel';
+import { sdkOpenRouterEndpoints } from '@src/domain.operations/supply/sdkOpenRouterEndpoints';
+
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
-import { getOneTierModel } from '../../domain.operations/atom/getOneTierModel';
-import { sdkOpenRouterEndpoints } from '../../domain.operations/supply/sdkOpenRouterEndpoints';
 
 const REPO_ROOT = path.join(__dirname, '../../..');
 
@@ -857,8 +858,10 @@ describe('getBrainAtomsByOpenRouter.acceptance', () => {
             },
             {
               'brain.supplier.openrouter': {
+                // .note = an unrecognized key earns the same 401 as any other; it must not
+                //         carry the `sk-` key shape, or the pre-commit secret check refuses it
                 creds: async () => ({
-                  OPENROUTER_API_KEY: 'sk-or-v1-not-a-real-key-for-acceptance',
+                  OPENROUTER_API_KEY: 'fake-openrouter-key-for-acceptance',
                 }),
               },
             },

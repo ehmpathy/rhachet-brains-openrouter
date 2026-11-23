@@ -2,7 +2,8 @@ import { ConstraintError } from 'helpful-errors';
 import { asIsoDateStamp, asIsoTimeStamp } from 'iso-time';
 import { getError, given, then, useThen, when } from 'test-fns';
 
-import type { OpenRouterCatalogModel } from '../../domain.objects/OpenRouterCatalogModel';
+import type { OpenRouterCatalogModel } from '@src/domain.objects/OpenRouterCatalogModel';
+
 import { getOneTierModel } from './getOneTierModel';
 
 /**
