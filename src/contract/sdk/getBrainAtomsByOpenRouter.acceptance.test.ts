@@ -261,10 +261,57 @@ const getOneUnlistedIdLive = async (): Promise<string> => {
     .filter((model) => model.architecture?.output_modalities?.includes('text'))
     .filter((model) => Number(model.pricing?.prompt) > 0)
     .sort((a, b) => Number(a.pricing?.prompt) - Number(b.pricing?.prompt));
-  const found = candidates[0]?.id;
-  if (!found)
-    throw new MalfunctionError('no unlisted cheap text model in the catalog');
-  return found;
+
+  // .why = the floor asks the cheapest host first; a long-tail model whose
+  //        cheapest host has served no traffic of late can hang past the test
+  //        timeout, which proves aught about the host, not "any id serves".
+  //        so walk the cheap ids, price order, to the first whose cheapest host
+  //        reports live throughput
+  for (const candidate of candidates.slice(0, 10)) {
+    const endpoints = await getOneOpenRouterJson({
+      path: `/models/${candidate.id}/endpoints`,
+      schema: SCHEMA_ENDPOINTS,
+    });
+    if (isCheapestHostLive({ endpoints: endpoints.data.endpoints }))
+      return candidate.id;
+  }
+  throw new MalfunctionError(
+    'no unlisted cheap text model in the catalog whose cheapest host is live',
+    { checked: candidates.slice(0, 10).map((c) => c.id) },
+  );
+};
+
+/**
+ * .what = the `/models/:id/endpoints` fields the live-host check reads
+ * .why = `pricing` and `throughput_last_30m` are openrouter's own field names
+ */
+const SCHEMA_ENDPOINTS = z.object({
+  data: z.object({
+    endpoints: z.array(
+      z.object({
+        pricing: z.object({ prompt: z.union([z.string(), z.number()]) }),
+        throughput_last_30m: z
+          .union([z.number(), z.object({ p50: z.number().nullish() })])
+          .nullish(),
+      }),
+    ),
+  }),
+});
+
+/**
+ * .what = whether a model's cheapest host served at ≥ 20 tps over the last 30 min
+ * .why = the floor's first pick is the cheapest host; a recent median proves it
+ *        answers, so the unlisted-id case tests this package, not one idle host
+ */
+const isCheapestHostLive = (input: {
+  endpoints: z.infer<typeof SCHEMA_ENDPOINTS>['data']['endpoints'];
+}): boolean => {
+  const cheapest = [...input.endpoints].sort(
+    (a, b) => Number(a.pricing.prompt) - Number(b.pricing.prompt),
+  )[0];
+  const throughput = cheapest?.throughput_last_30m;
+  const tps = typeof throughput === 'number' ? throughput : throughput?.p50;
+  return (tps ?? 0) >= 20;
 };
 
 /**
