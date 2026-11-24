@@ -1,6 +1,7 @@
 import { asIsoDateStamp, asIsoTimeStamp } from 'iso-time';
 
-import type { OpenRouterCatalogModel } from '../../domain.objects/OpenRouterCatalogModel';
+import type { OpenRouterCatalogModel } from '@src/domain.objects/OpenRouterCatalogModel';
+
 import { getAllSimilarModelIds } from './getAllSimilarModelIds';
 
 const CREATED_AT = asIsoTimeStamp('2026-01-01T00:00:00.000Z');

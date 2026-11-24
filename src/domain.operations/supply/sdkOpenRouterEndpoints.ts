@@ -4,8 +4,9 @@ import {
 } from 'with-simple-cache';
 import { z } from 'zod';
 
-import type { OpenRouterCatalogModel } from '../../domain.objects/OpenRouterCatalogModel';
-import type { OpenRouterEndpoint } from '../../domain.objects/OpenRouterEndpoint';
+import type { OpenRouterCatalogModel } from '@src/domain.objects/OpenRouterCatalogModel';
+import type { OpenRouterEndpoint } from '@src/domain.objects/OpenRouterEndpoint';
+
 import { asOpenRouterCacheKey } from './asOpenRouterCacheKey';
 import { asOpenRouterCatalogModels } from './asOpenRouterCatalogModels';
 import { asOpenRouterEndpointCacheKey } from './asOpenRouterEndpointCacheKey';

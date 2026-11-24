@@ -2,8 +2,9 @@ import { MalfunctionError } from 'helpful-errors';
 import OpenAI from 'openai';
 import { getError, given, then, useThen, when } from 'test-fns';
 
-import type { OpenRouterEndpoint } from '../../domain.objects/OpenRouterEndpoint';
-import { getOneAskErrorNamed } from '../atom/getOneAskErrorNamed';
+import type { OpenRouterEndpoint } from '@src/domain.objects/OpenRouterEndpoint';
+import { getOneAskErrorNamed } from '@src/domain.operations/atom/getOneAskErrorNamed';
+
 import { asSupplyFilters } from './asSupplyFilters';
 import { getOneSuppliedCompletion } from './getOneSuppliedCompletion';
 

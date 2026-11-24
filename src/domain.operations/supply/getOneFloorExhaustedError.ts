@@ -1,6 +1,7 @@
 import { MalfunctionError } from 'helpful-errors';
 
-import type { FloorAttempt } from '../../domain.objects/FloorAttempt';
+import type { FloorAttempt } from '@src/domain.objects/FloorAttempt';
+
 import { asHostFault } from './asHostFault';
 import { asHostFaultReason } from './asHostFaultReason';
 

@@ -1,4 +1,5 @@
-import type { OpenRouterEndpoint } from '../../domain.objects/OpenRouterEndpoint';
+import type { OpenRouterEndpoint } from '@src/domain.objects/OpenRouterEndpoint';
+
 import { asEndpointsSplitByProvider } from './asEndpointsSplitByProvider';
 
 const genEndpoint = (input: {

@@ -1,7 +1,8 @@
 import { asIsoDateStamp, asIsoTimeStamp } from 'iso-time';
 import { z } from 'zod';
 
-import type { OpenRouterCatalogModel } from '../../domain.objects/OpenRouterCatalogModel';
+import type { OpenRouterCatalogModel } from '@src/domain.objects/OpenRouterCatalogModel';
+
 import { asOpenRouterBodyChecked } from './asOpenRouterBodyChecked';
 
 /**

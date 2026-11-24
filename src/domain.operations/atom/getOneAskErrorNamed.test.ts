@@ -3,7 +3,8 @@ import { asIsoDateStamp, asIsoTimeStamp } from 'iso-time';
 import OpenAI from 'openai';
 import { given, then, useThen, when } from 'test-fns';
 
-import type { OpenRouterCatalogModel } from '../../domain.objects/OpenRouterCatalogModel';
+import type { OpenRouterCatalogModel } from '@src/domain.objects/OpenRouterCatalogModel';
+
 import { getOneAskErrorNamed } from './getOneAskErrorNamed';
 
 /**

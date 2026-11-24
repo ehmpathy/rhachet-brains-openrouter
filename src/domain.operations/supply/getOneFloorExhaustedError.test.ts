@@ -1,7 +1,8 @@
 import { MalfunctionError } from 'helpful-errors';
 import OpenAI from 'openai';
 
-import type { FloorAttempt } from '../../domain.objects/FloorAttempt';
+import type { FloorAttempt } from '@src/domain.objects/FloorAttempt';
+
 import { getOneFloorExhaustedError } from './getOneFloorExhaustedError';
 
 const ATTEMPTS: FloorAttempt[] = [

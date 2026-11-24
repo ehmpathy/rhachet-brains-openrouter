@@ -5,17 +5,17 @@ import { getSdkCredsFromBrainSupplies } from 'rhachet/brains';
 import { given, then, useThen, when } from 'test-fns';
 import { z } from 'zod';
 
-import type { SupplyReport } from '../../domain.objects/SupplyReport';
-import { sdkOpenRouterEndpoints } from '../supply/sdkOpenRouterEndpoints';
+import type { SupplyReport } from '@src/domain.objects/SupplyReport';
+import { sdkOpenRouterEndpoints } from '@src/domain.operations/supply/sdkOpenRouterEndpoints';
+
 import type { BrainSuppliesOpenRouter } from './BrainAtom.config';
 import { genBrainAtom } from './genBrainAtom';
+import { getOneTierModel } from './getOneTierModel';
 
 const context = genContextBrainSupplier<'openrouter', BrainSuppliesOpenRouter>(
   'openrouter',
   { creds: { keyrack: { owner: 'ehmpath', env: 'test' } } },
 );
-
-const MODEL_DEEPSEEK_FLASH = 'deepseek/deepseek-v4.1-flash';
 
 /**
  * .what = the openrouter api key, from the test keyrack
@@ -424,9 +424,17 @@ describe('genBrainAtom.supply.integration', () => {
           context,
         );
         const supply = asSupply(result);
+        // .why = the tier names a line, never a version; read the model the atom
+        //        asked, as the atom picked it, never a pinned id that a newer
+        //        release on the line leaves behind
+        const apiKey = await getApiKey();
+        const model = await getOneTierModel(
+          { tier: 'openrouter/deepseek/flash', apiKey },
+          { sdkOpenRouterEndpoints },
+        );
         const endpoints = await sdkOpenRouterEndpoints.getAllForModel({
-          model: MODEL_DEEPSEEK_FLASH,
-          apiKey: await getApiKey(),
+          model,
+          apiKey,
         });
         const served = endpoints.find(
           (e) => e.tag === supply.attempts.at(-1)?.tag,

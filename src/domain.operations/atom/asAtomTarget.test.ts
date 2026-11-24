@@ -1,7 +1,8 @@
 import { ConstraintError } from 'helpful-errors';
 import { getError, given, then, when } from 'test-fns';
 
-import { asSupplyFilters } from '../supply/asSupplyFilters';
+import { asSupplyFilters } from '@src/domain.operations/supply/asSupplyFilters';
+
 import { asAtomTarget } from './asAtomTarget';
 import { SPEC_ESTIMATE_BY_TIER } from './BrainAtom.config';
 import { SPEC_ESTIMATE_UNLISTED } from './slug/AtomSlug.unlisted';

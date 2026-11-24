@@ -1,6 +1,7 @@
 import type OpenAI from 'openai';
 
-import type { SupplyReport } from '../../domain.objects/SupplyReport';
+import type { SupplyReport } from '@src/domain.objects/SupplyReport';
+
 import { asRankedReport } from './asRankedReport';
 import { asSupplyFactsFromReply } from './asSupplyFactsFromReply';
 import type { SupplyFilters } from './asSupplyFilters';

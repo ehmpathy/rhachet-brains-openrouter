@@ -9,7 +9,9 @@ import { genZdrRefreshClaim } from './genZdrRefreshClaim';
  *        must use a real disk, never a fake
  */
 const genCache = () =>
-  createCache({ directory: { local: { path: genTempDir() } } });
+  createCache({
+    directory: { local: { path: genTempDir({ slug: 'genZdrRefreshClaim' }) } },
+  });
 
 describe('genZdrRefreshClaim', () => {
   // 🔴 .why = i003 review: the in-memory dedupe let each process start its own

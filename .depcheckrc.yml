@@ -6,6 +6,8 @@
 ignorePatterns:
   - .agent/.actors
   - .claude
+  - .agent/repo=*
+  - "!.agent/repo=.this"
 ignores:
   - depcheck
   - declapract
@@ -40,3 +42,9 @@ ignores:
   - rhachet-roles-ehmpathy
   - tsc-alias
   - yalc
+  - rhachet*
+  - declastruct-aws
+  - declastruct-unix-network
+  - test-fns
+  - type-fns
+  - yaml

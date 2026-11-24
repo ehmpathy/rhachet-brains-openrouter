@@ -1,0 +1,14 @@
+{"stone":"1.upgrade.invoke","status":"arrived","reason":"entered guard reviews"}
+{"stone":"1.upgrade.invoke","status":"blocked","blocker":"review.self","reason":"review.self required: has-completed-exec-successfully"}
+{"stone":"1.upgrade.invoke","status":"promised","reason":"promised review.self: has-completed-exec-successfully"}
+{"stone":"1.upgrade.invoke","status":"arrived","reason":"entered guard reviews"}
+{"stone":"1.upgrade.invoke","status":"passed"}
+{"stone":"2.detect.hazards","status":"arrived","reason":"entered guard reviews"}
+{"stone":"2.detect.hazards","status":"blocked","blocker":"review.self","reason":"review.self required: has-complete-hazard-scan"}
+{"stone":"2.detect.hazards","status":"promised","reason":"promised review.self: has-complete-hazard-scan"}
+{"stone":"2.detect.hazards","status":"arrived","reason":"entered guard reviews"}
+{"stone":"2.detect.hazards","status":"blocked","blocker":"review.self","reason":"review.self required: has-validated-hazards"}
+{"stone":"2.detect.hazards","status":"promised","reason":"promised review.self: has-validated-hazards"}
+{"stone":"2.detect.hazards","status":"arrived","reason":"entered guard reviews"}
+{"stone":"2.detect.hazards","status":"passed"}
+{"stone":"3.1.repair.test.defects","status":"blocked"}

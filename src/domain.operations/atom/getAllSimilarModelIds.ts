@@ -1,4 +1,4 @@
-import type { OpenRouterCatalogModel } from '../../domain.objects/OpenRouterCatalogModel';
+import type { OpenRouterCatalogModel } from '@src/domain.objects/OpenRouterCatalogModel';
 
 /**
  * .what = the edit distance between two strings

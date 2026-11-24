@@ -1,6 +1,7 @@
 import { today } from 'iso-time';
 
-import type { SdkOpenRouterEndpoints } from '../supply/sdkOpenRouterEndpoints';
+import type { SdkOpenRouterEndpoints } from '@src/domain.operations/supply/sdkOpenRouterEndpoints';
+
 import { getOneAccountError } from './getOneAccountError';
 import { getOneWithdrawnModelError } from './getOneWithdrawnModelError';
 import { isModelRefusal } from './isModelRefusal';

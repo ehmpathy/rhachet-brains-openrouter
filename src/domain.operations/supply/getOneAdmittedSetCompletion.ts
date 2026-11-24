@@ -1,7 +1,8 @@
 import type OpenAI from 'openai';
 
-import type { FloorAttempt } from '../../domain.objects/FloorAttempt';
-import type { OpenRouterEndpoint } from '../../domain.objects/OpenRouterEndpoint';
+import type { FloorAttempt } from '@src/domain.objects/FloorAttempt';
+import type { OpenRouterEndpoint } from '@src/domain.objects/OpenRouterEndpoint';
+
 import { asEndpointsSplitByProvider } from './asEndpointsSplitByProvider';
 import { asHostFault } from './asHostFault';
 import { asRetryAfter } from './asRetryAfter';

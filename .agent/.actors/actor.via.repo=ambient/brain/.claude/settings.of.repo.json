@@ -340,6 +340,12 @@
             "command": "bash .agent/repo=ehmpathy/role=mechanic/inits/claude.hooks/sessionstart.notify-permissions.sh",
             "timeout": 10,
             "author": "repo=ehmpathy/role=mechanic"
+          },
+          {
+            "type": "command",
+            "command": "./node_modules/.bin/rhx goal.triage.next --when hook.onBoot",
+            "timeout": 10,
+            "author": "repo=bhrain/role=achiever"
           }
         ]
       },
@@ -387,6 +393,12 @@
             "command": "./node_modules/.bin/rhx route.mutate.guard --mode hook",
             "timeout": 5,
             "author": "repo=bhrain/role=driver"
+          },
+          {
+            "type": "command",
+            "command": "./node_modules/.bin/rhx goal.guard",
+            "timeout": 5,
+            "author": "repo=bhrain/role=achiever"
           }
         ]
       },
@@ -485,6 +497,17 @@
             "author": "repo=ehmpathy/role=mechanic"
           }
         ]
+      },
+      {
+        "matcher": "Write|Edit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./node_modules/.bin/rhx memory.guard --mode hook",
+            "timeout": 5,
+            "author": "repo=bhrain/role=learner"
+          }
+        ]
       }
     ],
     "Stop": [
@@ -502,13 +525,42 @@
             "command": "node -e \"import('rhachet-roles-bhuild').then(m => m.cli.radioTaskHeld())\" -- --when hook.onStop",
             "timeout": 10,
             "author": "repo=bhuild/role=dispatcher"
+          },
+          {
+            "type": "command",
+            "command": "./node_modules/.bin/rhx elucidate.summary --when hook.onStop",
+            "timeout": 5,
+            "author": "repo=bhrain/role=telepath"
+          },
+          {
+            "type": "command",
+            "command": "./node_modules/.bin/rhachet roles cost --all --when hook.onStop",
+            "timeout": 60,
+            "author": "repo=.this/role=any"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./node_modules/.bin/rhx goal.triage.infer --when hook.onTalk",
+            "timeout": 5,
+            "author": "repo=bhrain/role=achiever"
           }
         ]
       }
     ]
   },
   "claudeMdExcludes": [
-    "/home/vlad/.claude/CLAUDE.md",
+    "/home/camper/.claude/CLAUDE.md",
     "**/CLAUDE.local.md"
-  ]
+  ],
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  }
 }

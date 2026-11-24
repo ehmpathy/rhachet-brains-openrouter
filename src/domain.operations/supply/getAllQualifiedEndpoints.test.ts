@@ -1,6 +1,7 @@
 import { getError } from 'test-fns';
 
-import type { OpenRouterEndpoint } from '../../domain.objects/OpenRouterEndpoint';
+import type { OpenRouterEndpoint } from '@src/domain.objects/OpenRouterEndpoint';
+
 import type { SupplyFilters } from './asSupplyFilters';
 import { getAllQualifiedEndpoints } from './getAllQualifiedEndpoints';
 

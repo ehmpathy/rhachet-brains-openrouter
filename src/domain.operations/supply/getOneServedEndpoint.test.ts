@@ -1,7 +1,8 @@
 import { MalfunctionError } from 'helpful-errors';
 import { getError } from 'test-fns';
 
-import type { OpenRouterEndpoint } from '../../domain.objects/OpenRouterEndpoint';
+import type { OpenRouterEndpoint } from '@src/domain.objects/OpenRouterEndpoint';
+
 import { getOneServedEndpoint } from './getOneServedEndpoint';
 
 // .why = case=22: an answer from a provider outside the admitted set is withheld

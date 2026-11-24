@@ -1,8 +1,9 @@
 import { given, then, when } from 'test-fns';
 
+import { getAllAtomSlugs } from '@src/domain.operations/atom/slug/getAllAtomSlugs';
+
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { getAllAtomSlugs } from '../domain.operations/atom/slug/getAllAtomSlugs';
 
 /**
  * .what = the readme a stranger follows from no account to a first call

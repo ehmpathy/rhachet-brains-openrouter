@@ -1,6 +1,7 @@
 import { ConstraintError } from 'helpful-errors';
 
-import type { SdkOpenRouterEndpoints } from '../supply/sdkOpenRouterEndpoints';
+import type { SdkOpenRouterEndpoints } from '@src/domain.operations/supply/sdkOpenRouterEndpoints';
+
 import {
   type BrainAtomSlugOpenRouterBare,
   TIER_BY_BARE_SLUG,

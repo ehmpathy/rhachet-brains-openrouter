@@ -2,7 +2,8 @@ import { MalfunctionError } from 'helpful-errors';
 import OpenAI from 'openai';
 import { getError, given, then, useThen, when } from 'test-fns';
 
-import type { OpenRouterEndpoint } from '../../domain.objects/OpenRouterEndpoint';
+import type { OpenRouterEndpoint } from '@src/domain.objects/OpenRouterEndpoint';
+
 import type { SupplyFilters } from './asSupplyFilters';
 import { getOneFloorCompletion } from './getOneFloorCompletion';
 

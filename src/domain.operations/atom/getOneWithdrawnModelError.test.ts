@@ -2,7 +2,8 @@ import { ConstraintError } from 'helpful-errors';
 import { asIsoDateStamp, asIsoTimeStamp, type IsoDateStamp } from 'iso-time';
 import { given, then, when } from 'test-fns';
 
-import type { OpenRouterCatalogModel } from '../../domain.objects/OpenRouterCatalogModel';
+import type { OpenRouterCatalogModel } from '@src/domain.objects/OpenRouterCatalogModel';
+
 import { getOneWithdrawnModelError } from './getOneWithdrawnModelError';
 
 const TODAY: IsoDateStamp = asIsoDateStamp('2026-10-15');

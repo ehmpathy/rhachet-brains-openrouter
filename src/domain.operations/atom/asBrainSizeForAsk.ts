@@ -1,6 +1,6 @@
 import type OpenAI from 'openai';
 
-import { asBrainSizeTokens } from '../../infra/cast/asBrainSizeTokens';
+import { asBrainSizeTokens } from '@src/infra/cast/asBrainSizeTokens';
 
 /**
  * .what = the size of one ask: its tokens, as billed, and its chars, in and out

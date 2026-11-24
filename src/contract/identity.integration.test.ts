@@ -63,6 +63,18 @@ const FILES_EXEMPT: { matches: (file: string) => boolean; why: string }[] = [
     why: 'generated; the reviewer roles (rhachet-roles-bhrain, -bhuild) declare the predecessor brain package as a peer, which this repo does not import',
   },
   {
+    matches: (file) => file === 'package.json',
+    why: 'the reviewer roles declare the predecessor brain package as a peer, so the devDependencies list it; [t1] clamps that only devDependencies may',
+  },
+  {
+    matches: (file) => file === '.husky/check.secrets.sh',
+    why: 'a table of secret key shapes, one per provider; it must name each provider whose key it refuses',
+  },
+  {
+    matches: (file) => file.startsWith('.route/'),
+    why: 'a route records the dependencies it added, by name, as .behavior/ does',
+  },
+  {
     matches: (file) => file === 'src/contract/identity.integration.test.ts',
     why: 'this clamp must spell the name it hunts',
   },
@@ -107,6 +119,17 @@ describe('identity', () => {
 
       then('the repository is ehmpathy/rhachet-brains-openrouter', () => {
         expect(pkg.repository).toEqual('ehmpathy/rhachet-brains-openrouter');
+      });
+
+      then('only the devDependencies name the predecessor', () => {
+        // .note = the proxy useBeforeAll returns forwards reads only; parse a plain copy to walk its keys
+        const pkgPlain = JSON.parse(
+          readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf8'),
+        );
+        const pkgShipped = JSON.stringify(pkgPlain, (key, value) =>
+          key === 'devDependencies' ? undefined : value,
+        );
+        expect(pkgShipped).not.toMatch(/fireworks/i);
       });
     });
 

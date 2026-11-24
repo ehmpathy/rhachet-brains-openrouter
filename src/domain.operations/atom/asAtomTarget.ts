@@ -1,12 +1,13 @@
 import { ConstraintError } from 'helpful-errors';
 import type { BrainSpec } from 'rhachet/brains';
 
-import { asSlugParts } from '../supply/asSlugParts';
+import { asSlugParts } from '@src/domain.operations/supply/asSlugParts';
 import {
   asSupplyFilters,
   SUPPLY_FILTERS_DEFAULT_SEGMENT,
   type SupplyFilters,
-} from '../supply/asSupplyFilters';
+} from '@src/domain.operations/supply/asSupplyFilters';
+
 import {
   type BrainAtomSlugOpenRouterBare,
   TIER_BY_BARE_SLUG,
